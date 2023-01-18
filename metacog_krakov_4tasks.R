@@ -35,47 +35,11 @@ apatheme=theme_bw()+ #theme
 
 ## Import data ----------------------------------------------------------------
 
-DF_auditory <- read.csv("auditory.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-DF_visual <- read.csv("visual.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-DF_somato <- read.csv("somato.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-
-
-## Combine dataframe -----------------------------------------------------------
-
-DF_visual %<>% 
-  mutate(Modality = 'Visual') %>% 
-  select(Pp = Subject,
-         Modality, 
-         Resp = answ_1,
-         Resp_RT = rt_1,
-         Correct = Target,
-         Acc = correct,
-         Confidence = answ_2,
-         Confidence_RT = rt_2)
-
-DF_auditory %<>% 
-  mutate(Modality = 'Auditory') %>% 
-  select(Pp = Subject,
-         Modality, 
-         Resp = answ_1,
-         Resp_RT = rt_1,
-         Correct = Direction,
-         Acc = correct,
-         Confidence = answ_2,
-         Confidence_RT = rt_2)
-
-DF_somato %<>% 
-  select(Pp = Subject,
-         Modality, 
-         Resp = Answ_1,
-         Resp_RT = RT_1,
-         Correct = Cnd,
-         Acc = Correct,
-         Confidence = Answ_2,
-         Confidence_RT = RT_2)
+DF_auditory <- read.csv("DF_auditory.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+DF_visual <- read.csv("DF_visual.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+DF_somato <- read.csv("DF_somato.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 
 DF_all_tasks <- rbind(DF_visual, DF_auditory, DF_somato)
-
 
 
 ## First-order performance: % Correct -------------------------------------------------------------
@@ -241,15 +205,6 @@ write.csv(mcmc.sample, "./results/dataset2/Hierarchial_mcmc_sample.csv")
 # Import data
 mcmc.sample <- read.csv("./results/dataset2/Hierarchial_mcmc_sample.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 Fit <- read.csv("./results/dataset2/Hierarchial_Mratio.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-
-# Apatheme for plot
-apatheme=theme_bw()+ #theme
-  theme(panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),
-        panel.border=element_blank(),
-        axis.line=element_line(),
-        text = element_text(size = 15),
-        axis.title = element_text(size = 12))
 
 # Plot mu_logMratio posterior distribution
 

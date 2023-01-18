@@ -23,8 +23,12 @@ library(broom)
 library(ggpubr)
 library(ggmcmc)
 library(cowplot)
-#library(factoextra)
+library(Rcpp) 
+library(RcppZiggurat)
+library(DEoptim) 
+library(reshape)
 
+source("vratio_function.R") 
 
 apatheme=theme_bw()+ #theme
   theme(panel.grid.major=element_blank(),
@@ -40,6 +44,7 @@ DF <- read.csv("aarhus_data_metacognition.csv", header=TRUE, sep=";", dec=",", f
 
 
 ## Variables selection -----------------------------------------------------------
+
 DF %<>%
   select(Pp = Subject,
          Left = Left,
@@ -59,11 +64,11 @@ DF %<>%
 
 DF2 <- DF %>% 
   mutate(Resp_EF = as.character(Resp_EF),
-        Resp_EM = as.character(Resp_EM),
-        Resp_SM = as.character(Resp_SM),
-        Resp_VP = as.character(Resp_VP),
-        Resp = ifelse(Resp_EF != "", Resp_EF, ifelse(Resp_EM != "", Resp_EM, ifelse(Resp_SM != "", Resp_SM, ifelse(Resp_VP != "", Resp_VP, "NO")))),
-        Resp_RT = ifelse(RT_EF != "NA", RT_EF, ifelse(RT_EM != "NA", RT_EM, ifelse(RT_SM != "NA", RT_SM, ifelse(RT_VP != "NA", RT_VP, "NO"))))) %>% 
+         Resp_EM = as.character(Resp_EM),
+         Resp_SM = as.character(Resp_SM),
+         Resp_VP = as.character(Resp_VP),
+         Resp = ifelse(Resp_EF != "", Resp_EF, ifelse(Resp_EM != "", Resp_EM, ifelse(Resp_SM != "", Resp_SM, ifelse(Resp_VP != "", Resp_VP, "No")))),
+         Resp_RT = ifelse(Resp_EF != "", RT_EF, ifelse(Resp_EM != "", RT_EM, ifelse(Resp_SM != "", RT_SM, ifelse(Resp_VP != "", RT_VP, "No"))))) %>% 
   filter(Task != "encod" & Task != "encod1") %>%
   mutate(Task = case_when(
     Task == "EM2" | Task == "EM" ~ "EM",
@@ -80,7 +85,7 @@ DF2 <- DF %>%
                 Left,
                 Right) 
 
-DF3 <- DF2
+DF_all_sub <- DF2
 
 
 ## First-order performance: % Correct -------------------------------------------------------------
@@ -95,7 +100,6 @@ Perf <- DF2 %>%
 
 
 ## Exclusion criteria ----------------------------------------------------
-
 
 # Exclude pp with performance above 95% and bellow 55% for HHM
 
@@ -500,7 +504,7 @@ mean(Diff$SMEF)
 
 # Prepare data
 
-DF3 %<>%
+DF3 <- DF_all_sub %>% 
   mutate(Count = 1,
          Task_num = case_when(
            Task == "EM" ~ 1,
@@ -925,4 +929,80 @@ DF_PCA %<>%
 PCA_Mratio <- princomp(DF_PCA, cor = TRUE, scores = TRUE)
 summary(PCA_Mratio)
 
+
+
+## v-ratio calculation  ----------------------------------------------------
+
+# Arrange data for model 
+
+DF_vratio <-  DF_all_sub %>% 
+  mutate(cor = case_when(
+    Resp == "{LEFTARROW}" & CR == "s"~ 1,
+    Resp == "{RIGHTARROW}" & CR == "s"~ 0,
+    Resp == "{LEFTARROW}" & CR == "l"~ 0,
+    Resp == "{RIGHTARROW}" & CR == "l"~ 1)) %>% 
+  mutate(rt = as.numeric(Resp_RT)/1000,
+         rtcj = as.numeric(Confidence_RT)/1000) %>% 
+  select(Pp, 
+         Task,
+         cor,
+         rt,
+         cj = Confidence,
+         rtcj)
+
+# Fit the data 
+
+# some fitting details 
+itermax <- 1000 #ideally high enough (~1000, depending on convergence)
+trace <- 50
+
+# parameter bounds
+v_range <- c(0,4)
+a_range <- c(.5,4)
+ter_range <- c(.1,1)
+v_ratio_range <- c(0,2.5)
+add_mean_range <- c(0,10) #note, these upper bounds depend a lot on the confidence scale used
+add_sd_range <- c(0,10) #note, these upper bounds depend a lot on the confidence scale used
+
+subj <- unique(DF_vratio$Pp)
+tasks <- unique(DF_vratio$Task)
+conf_levels <- n_distinct(DF_vratio$cj)
+
+V_fit_all_pariticipants <- data.frame()
+
+for (t in tasks) {
+  
+  for (n in subj) {
+    
+    data_indiv <- DF_vratio %>% 
+      filter(Pp == n) %>% 
+      filter(Task == t)
+    
+    fit <- DEoptim(chi_square_optim, 
+                   lower=c(v_range[1],a_range[1],ter_range[1],v_ratio_range[1],add_mean_range[1],add_sd_range[1]), 
+                   upper=c(v_range[2],a_range[2],ter_range[2],v_ratio_range[2],add_mean_range[2],add_sd_range[2]),
+                   observations=data_indiv,
+                   conf_levels=conf_levels,
+                   returnFit=1,
+                   control=list(itermax=itermax, trace=trace, parallelType=1, packages=c("Rcpp")))
+    fitted_params <- round(fit$optim$bestmem, 4)
+    names(fitted_params) <- c("v","a","ter","vratio","add_mean","add_sd")
+    
+    indiv_param <- data.frame(Pp = n,
+                              Task = t,
+                              v = fitted_params['v'],
+                              a = fitted_params['a'],
+                              ter = fitted_params['ter'],
+                              vratio = fitted_params['vratio'],
+                              add_mean = fitted_params['add_mean'],
+                              add_sd = fitted_params['add_sd'])
+    
+    V_fit_all_pariticipants %<>% rbind(indiv_param) 
+    
+  }
+}
+
+# Save individual fits
+
+write.csv(V_fit_all_pariticipants, "results/dataset1/v-ratio_fits.csv")
 
