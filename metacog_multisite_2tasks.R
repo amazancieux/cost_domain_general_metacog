@@ -75,24 +75,26 @@ for (i in files_A$value){
 
 ## Combine dataframe -----------------------------------------------------------
 
-DF_all_sites <- rbind(data_A, data_K)
-
+DF_all_sites <- rbind(data_A, data_K) %>% 
+  mutate(Modality = ifelse(BlockType == 1 | BlockType == 11, "Visual", "Auditory")) %>% 
+  arrange(Pp)
 
 
 ## First-order performance: % Correct -------------------------------------------------------------
 
-Perf <- data_K %>% 
-  dcast(Pp ~ BlockType, value.var = "correct", mean)
+Perf <- DF_all_sites %>% 
+  filter(!is.nan(correct)) %>% 
+  dcast(Pp ~ Modality, value.var = "correct", mean)
 
 
 ## Data preparation for Meta-d' model  --------------------------------------------
 
-# exclusion of pp that did not performed the 4 tasks
+# exclusion of pp that did not performed the 2 tasks
 
 To_excl <- Perf %>% 
-  filter(Auditory == "NaN" | Visual == "NaN" | Tactile == "NaN" | Pain == "NaN")
+  filter(Auditory == "NaN" | Visual == "NaN")
 
-DF2 <- DF_all_tasks
+DF2 <- DF_all_sites
 for (i in 1:nrow(To_excl)){
   DF2 %<>%
     filter(Pp != To_excl[i,1])
@@ -101,10 +103,10 @@ for (i in 1:nrow(To_excl)){
 # exclude pp with performance above 95% and bellow 55% for HHM
 
 Excl <- Perf %>% 
-  filter(Auditory > 0.95 | Visual > 0.95 | Tactile > 0.95 | Pain > 0.95)
+  filter(Auditory > 0.95 | Visual > 0.95)
 
 Excl2 <- Perf %>% 
-  filter(Auditory < 0.55 | Visual < 0.55 | Tactile < 0.55 | Pain < 0.55)
+  filter(Auditory < 0.55 | Visual < 0.55)
 
 for (i in 1:nrow(To_excl)){
   DF2 %<>%
@@ -118,27 +120,22 @@ for (i in 1:nrow(To_excl)){
 
 # Prepare data
 
-ntask <- n_distinct(data$BlockType)
+tasks <- unique(DF2$Modality)
 
-nR_S1 <- list(
-  data.frame(),
-  data.frame())
+nR_S1 <- list()
+nR_S2 <- list()
 
-nR_S2 <- list(
-  data.frame(),
-  data.frame())
+DF2 %<>% mutate(Count = 1) 
 
-data %<>% mutate(Count = 1) 
-
-for (t in 1:(ntask)) {
+for (t in tasks) {
   
-  S1 <- data %>% 
+  S1 <- DF2 %>% 
     filter(Direction == 1,
-           BlockType == t) %>% 
+           Modality == t) %>% 
     mutate(Resp = case_when(
       answ_1 == 1 ~ "R1",
       answ_1 == 2 ~ "R2")) %>% 
-    dcast(pp ~ answ_2 + Resp, value.var = "Count", sum) %>% 
+    dcast(Pp ~ answ_2 + Resp, value.var = "Count", sum) %>% 
     select(`6_R1`,
            `5_R1`,
            `4_R1`,
@@ -154,13 +151,13 @@ for (t in 1:(ntask)) {
   
   nR_S1[[t]] %<>%  rbind(S1)
   
-  S2 <- data %>% 
+  S2 <- DF2 %>% 
     filter(Direction == 2,
-           BlockType == t) %>% 
+           Modality == t) %>% 
     mutate(Resp = case_when(
       answ_1 == 1 ~ "R1",
       answ_1 == 2 ~ "R2")) %>% 
-    dcast(pp ~ answ_2 + Resp, value.var = "Count", sum) %>% 
+    dcast(Pp ~ answ_2 + Resp, value.var = "Count", sum) %>% 
     select(`6_R1`,
            `5_R1`,
            `4_R1`,
@@ -177,7 +174,6 @@ for (t in 1:(ntask)) {
   nR_S2[[t]] %<>%  rbind(S2)
   
 }
-
 
 
 ## HMeta model ----------------------------------------------------------
@@ -215,31 +211,21 @@ Fit <- stat_group %>%
         upper = HDI$upper,
         Rhat = Rhat[,1])
 
-write.csv(Fit, "./results/dataset2/Hierarchial_Mratio.csv")
+write.csv(Fit, "./results/dataset3/Hierarchial_Mratio.csv")
 
 # Traceplot
 traceplot(H_output)
 
 # MCMC sample
 mcmc.sample <- ggs(H_output)
-write.csv(mcmc.sample, "./results/dataset2/Hierarchial_mcmc_sample.csv")
-
+write.csv(mcmc.sample, "./results/dataset3/Hierarchial_mcmc_sample.csv")
 
 
 ## Plot posterior distributions -------------------------------------------------------------------
 
 # Import data
-mcmc.sample <- read.csv("./results/dataset2/Hierarchial_mcmc_sample.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-Fit <- read.csv("./results/dataset2/Hierarchial_Mratio.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-
-# Apatheme for plot
-apatheme=theme_bw()+ #theme
-  theme(panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),
-        panel.border=element_blank(),
-        axis.line=element_line(),
-        text = element_text(size = 15),
-        axis.title = element_text(size = 12))
+mcmc.sample <- read.csv("./results/dataset3/Hierarchial_mcmc_sample.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+Fit <- read.csv("./results/dataset3/Hierarchial_Mratio.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 
 # Plot mu_logMratio posterior distribution
 
@@ -267,115 +253,25 @@ Visual <- mcmc.sample %>%
   ylab("Sample count") +
   xlab(expression(paste(mu, " Mratio")))
 
-Tactile <- mcmc.sample %>%
-  filter(Parameter == "mu_logMratio[3]") %>% 
-  ggplot(aes(exp(value))) +
-  geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
-  geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[3]"]),linetype="dashed", size = 1) +
-  geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[3]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[3]"]), yend = 200), colour = "white", size = 2.5) +
-  apatheme +
-  xlim(c(0.70, 1.40)) +
-  ylim(c(0, 6500)) +
-  ylab("Sample count") +
-  xlab(expression(paste(mu, " Mratio")))
-
-Pain <- mcmc.sample %>%
-  filter(Parameter == "mu_logMratio[4]") %>% 
-  ggplot(aes(exp(value))) +
-  geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
-  geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[4]"]),linetype="dashed", size = 1) +
-  geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[4]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[4]"]), yend = 200), colour = "white", size = 2.5) +
-  apatheme +
-  xlim(c(0.70, 1.40)) +
-  ylim(c(0, 6500)) +
-  ylab("Sample count") +
-  xlab(expression(paste(mu, " Mratio")))
-
-png(file="./plots/dataset2/MRATIO_4MODALITIES.png", width=10, height=8, units="in", res=300)
-plot_grid(Auditory, Visual, Tactile, Pain, labels = c("Auditory", "Visual", "Tactile", "Pain"), nrow = 2, ncol = 2) 
+png(file="./plots/dataset3/MRATIO_2MODALITIES.png", width=10, height=5, units="in", res=300)
+plot_grid(Auditory, Visual, labels = c("Auditory", "Visual"), nrow = 1, ncol = 2) 
 dev.off()
-
 
 # Plot rho posterior distribution
 
-mcmc.rho <- mcmc.sample %>% 
-  filter(Parameter == "rho[1]"| Parameter == "rho[2]"| Parameter == "rho[3]"| Parameter == "rho[4]"| Parameter == "rho[5]"| Parameter == "rho[6]")
-
-Rho1 <- mcmc.sample %>%
-  filter(Parameter == "rho[1]") %>% 
+mcmc.sample %>%
+  filter(Parameter == "rho") %>% 
   ggplot(aes(value)) +
   geom_histogram(binwidth = 0.03, fill = "blue", colour = "grey", alpha = 0.5) +
-  geom_vline(xintercept = stat_group$mean[stat_group$name == "rho[1]"],linetype="dashed", size = 1) +
-  geom_segment(aes(x = HDI$lower[HDI$name == "rho[1]"], y = 80, xend = HDI$upper[HDI$name == "rho[1]"], yend = 80), colour = "white", size = 1.5) +
+  geom_vline(xintercept = stat_group$mean[stat_group$name == "rho"],linetype="dashed", size = 1) +
+  geom_segment(aes(x = HDI$lower[HDI$name == "rho"], y = 80, xend = HDI$upper[HDI$name == "rho"], yend = 80), colour = "white", size = 1.5) +
   apatheme +
   xlim(c(-1, 1)) +
   ylim(c(0, 4500)) +
   ylab("Sample count") +
   xlab(expression(paste(rho, " value for auditory/visual correlation")))
 
-Rho2 <- mcmc.sample %>%
-  filter(Parameter == "rho[2]") %>% 
-  ggplot(aes(value)) +
-  geom_histogram(binwidth = 0.03, fill = "blue", colour = "grey", alpha = 0.5) +
-  geom_vline(xintercept = stat_group$mean[stat_group$name == "rho[2]"],linetype="dashed", size = 1) +
-  geom_segment(aes(x = HDI$lower[HDI$name == "rho[2]"], y = 80, xend = HDI$upper[HDI$name == "rho[2]"], yend = 80),colour = "white", size = 1.5) +
-  apatheme +
-  xlim(c(-1, 1)) +
-  ylim(c(0, 4500)) +
-  ylab("Sample count") +
-  xlab(expression(paste(rho, " value for auditory/tactile correlation")))
-
-Rho3 <- mcmc.sample %>%
-  filter(Parameter == "rho[3]") %>% 
-  ggplot(aes(value)) +
-  geom_histogram(binwidth = 0.03, fill = "blue", colour = "grey", alpha = 0.5) +
-  geom_vline(xintercept = stat_group$mean[stat_group$name == "rho[3]"],linetype="dashed", size = 1) +
-  geom_segment(aes(x = HDI$lower[HDI$name == "rho[3]"], y = 80, xend = HDI$upper[HDI$name == "rho[3]"], yend = 80), colour = "white", size = 1.5) +
-  apatheme +
-  xlim(c(-1, 1)) +
-  ylim(c(0, 4500)) +
-  ylab("Sample count") +
-  xlab(expression(paste(rho, " value for auditory/pain correlation")))
-
-Rho4 <- mcmc.sample %>%
-  filter(Parameter == "rho[4]") %>% 
-  ggplot(aes(value)) +
-  geom_histogram(binwidth = 0.03, fill = "blue", colour = "grey", alpha = 0.5) +
-  geom_vline(xintercept = stat_group$mean[stat_group$name == "rho[4]"],linetype="dashed", size = 1) +
-  geom_segment(aes(x = HDI$lower[HDI$name == "rho[4]"], y = 80, xend = HDI$upper[HDI$name == "rho[4]"], yend = 80), colour = "white", size = 1.5) +
-  apatheme +
-  xlim(c(-1, 1)) +
-  ylim(c(0, 4500)) +
-  ylab("Sample count") +
-  xlab(expression(paste(rho, " value for visual/tactile correlation")))
-
-Rho5 <- mcmc.sample %>%
-  filter(Parameter == "rho[5]") %>% 
-  ggplot(aes(value)) +
-  geom_histogram(binwidth = 0.03, fill = "blue", colour = "grey", alpha = 0.5) +
-  geom_vline(xintercept = stat_group$mean[stat_group$name == "rho[5]"],linetype="dashed", size = 1) +
-  geom_segment(aes(x = HDI$lower[HDI$name == "rho[5]"], y = 80, xend = HDI$upper[HDI$name == "rho[5]"], yend = 80), colour = "white", size = 1.5) +
-  apatheme +
-  xlim(c(-1, 1)) +
-  ylim(c(0, 4500)) +
-  ylab("Sample count") +
-  xlab(expression(paste(rho, " value for visual/pain correlation")))
-
-Rho6 <- mcmc.sample %>%
-  filter(Parameter == "rho[6]") %>% 
-  ggplot(aes(value)) +
-  geom_histogram(binwidth = 0.03, fill = "blue", colour = "grey", alpha = 0.5) +
-  geom_vline(xintercept = stat_group$mean[stat_group$name == "rho[6]"],linetype="dashed", size = 1) +
-  geom_segment(aes(x = HDI$lower[HDI$name == "rho[6]"], y = 80, xend = HDI$upper[HDI$name == "rho[6]"], yend = 80), colour = "white", size = 1.5) +
-  apatheme +
-  xlim(c(-1, 1)) +
-  ylim(c(0, 4500)) +
-  ylab("Sample count") +
-  xlab(expression(paste(rho, " value for tactile/pain correlation")))
-
-png(file="./plots/dataset2/MRATIO_6COR.png", width=10, height=8, units="in", res=300)
-plot_grid(Rho1, Rho2, Rho3, NULL, Rho4, Rho5, NULL, NULL, Rho6, labels = c("A", "B", "C", "", "D", "E", "", "", "F"), nrow = 3, ncol = 3)
-dev.off()
+png(file="./plots/dataset3/MRATIO_COR.png", width=8, height=8, units="in", res=300)
 
 
 ## Individual meta_d function -----------------------------------------------------
@@ -754,6 +650,8 @@ Plot_cor6 <- corr_TP %>%
 png(file="./plots/dataset2/INDIV_COR6.png", width=11, height=8, units="in", res=300)  
 plot_grid(Plot_cor1, Plot_cor2, Plot_cor3,NULL,Plot_cor4, Plot_cor5,NULL,NULL,Plot_cor6, nrow = 3, ncol = 3)
 dev.off()
+
+
 
 
 
