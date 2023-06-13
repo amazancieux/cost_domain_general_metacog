@@ -99,6 +99,15 @@ Perf <- DF2 %>%
   dcast(Pp ~ Task, value.var = "Acc", mean)
 
 
+
+## Raw confidence  -------------------------------------------------------
+
+Raw_conf <- DF2 %>% 
+  dcast(Pp ~ Task, value.var = "Confidence", mean)
+
+write.csv(Raw_conf, "./results/dataset1/raw_confidence1.csv")
+
+
 ## Exclusion criteria ----------------------------------------------------
 
 # Exclude pp with performance above 95% and bellow 55% for HHM
@@ -194,6 +203,9 @@ for (t in 1:(ntask)) {
 
 }
 
+# save included participants ID
+sub_id <- data.frame(Pp = sort(unique(DF2$Pp)))
+write.csv2(sub_id, "./results/dataset1/participant_id_H-metad.csv")
 
 
 ## HMeta model ----------------------------------------------------------
@@ -231,14 +243,14 @@ Fit <- stat_group %>%
         upper = HDI$upper,
         Rhat = Rhat[,1])
 
-write.csv(Fit, "/results/dataset1/Hierarchial_Mratio.csv")
+write.csv(Fit, "./results/dataset1/Hierarchial_Mratio.csv")
 
 # Traceplot
 traceplot(H_output)
 
 # MCMC sample
 mcmc.sample <- ggs(H_output)
-write.csv(mcmc.sample, "/results/dataset1/Hierarchial_mcmc_sample.csv")
+write.csv(mcmc.sample, "./results/dataset1/Hierarchial_mcmc_sample.csv")
 
 
 
@@ -504,7 +516,7 @@ mean(Diff$SMEF)
 
 # Prepare data
 
-DF3 <- DF_all_sub %>% 
+DF3 <- DF2 %>% 
   mutate(Count = 1,
          Task_num = case_when(
            Task == "EM" ~ 1,
@@ -624,7 +636,7 @@ for (t in 1:(ntask)) {
 write.csv(stat, "results/dataset1/output_fit_individual_metad.csv")
 
 
-## Calculate ratio and plot data ------------------------------------------------------------
+## Calculate M-ratio  ------------------------------------------------------------
 
 # First-order performance 
 
@@ -644,263 +656,33 @@ metad <- data.frame(EM = stat[[1]][,11]) %>%
   gather(Task, metad) %>% 
   cbind(Pp = Pp)
 
-# Plot_metad <- metad %>% 
-#   group_by(Task) %>% 
-#   summarise(VD = mean(score),
-#             sd = sd(score),
-#             se = sd/sqrt(nsubj),
-#             CI = se * qt(.975, n() - 1)) %>% 
-#   ggplot(aes(x = Task, y = VD, color = Task)) +
-#   geom_point(data = metad, 
-#              aes(x = Task, y = score, color = Task), 
-#              position = position_jitterdodge(0.3), 
-#              size = 1, shape = 1) +
-#   geom_boxplot(data = metad,
-#                aes(x = Task, y = score, fill = Task),
-#                outlier.shape = NA,
-#                alpha = .5, width = .2,
-#                position = position_dodge(0.7)) +
-#   geom_point(size = 3, position = position_dodge(0.2)) +
-#   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.80, position = position_dodge(0.2))+
-#   scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-#   scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-#   apatheme +
-#   xlab("Task") +
-#   ylab("meta-d' value")
-
-
-# Metacognitive efficiency
+# M-ratio
 
 Mratio <- merge(d_prime, metad, by=c('Pp','Task'))
 Mratio %<>% 
   mutate(Mratio = metad/d)
 
-write.csv(Mratio, "Individual_Mratio.csv")
-
-# Plot_Mratio <- Mratio %>% 
-#   group_by(Task) %>% 
-#   summarise(VD = mean(Mratio),
-#             sd = sd(Mratio),
-#             se = sd/sqrt(nsubj),
-#             CI = se * qt(.975, n() - 1)) %>% 
-#   ggplot(aes(x = Task, y = VD, color = Task)) +
-#   geom_point(data = Mratio, 
-#              aes(x = Task, y = Mratio, color = Task), 
-#              position = position_jitterdodge(0.3), 
-#              size = 1, shape = 1) +
-#   geom_boxplot(data = Mratio,
-#                aes(x = Task, y = Mratio, fill = Task),
-#                outlier.shape = NA,
-#                alpha = .5, width = .2,
-#                position = position_dodge(0.7)) +
-#   geom_point(size = 3, position = position_dodge(0.1)) +
-#   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.80, position = position_dodge(0.1))+
-#   scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-#   scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-#   apatheme +
-#   xlab("Task") +
-#   ylab("Mratio value")
-# 
-# 
-# png(file="./INDIV_4TASK.png", width=10, height=8, units="in", res=300)  
-# plot_grid(Plot_d, Plot_metad, Plot_Mratio, labels = c("A", "B", "C"), nrow = 2, ncol = 2)
-# dev.off()
+write.csv(Mratio, "results/dataset1/Individual_Mratio.csv")
 
 
-# Exclude pp with first-order perf > 0.95
+# Exclude pp with first-order perf > 0.95 and < 0.55 for each task
 
-Excl_EM <- Perf %>% 
-  filter(EM > 0.95 | EM < 0.55)
+Perf2 <- Perf %>% 
+  gather(Task, perf, -Pp) 
 
-Excl_SM <- Perf %>% 
-  filter(SM > 0.95 | SM < 0.55)
+Mratio_all <- merge(Mratio, Perf2, by=c("Pp","Task"))
+Mratio_all %<>%
+  filter(perf >= 0.55 & perf <= 0.95)
 
-Excl_VP <- Perf %>% 
-  filter(VP > 0.95 | VP < 0.55)
+# Exclude sub with Mratio > 4
+Mratio_all %<>% 
+  filter(Mratio > 3)
 
-Excl_EF <- Perf %>% 
-  filter(EF > 0.95 | EF < 0.55)
-
-
-# Plot data
-
-Plot_d <- d_prime %>%
-  group_by(Task) %>%
-  summarise(VD = mean(score),
-            sd = sd(score),
-            se = sd/sqrt(nsubj),
-            CI = se * qt(.975, n() - 1)) %>%
-  ggplot(aes(x = Task, y = VD, color = Task)) +
-  geom_point(data = d_prime,
-             aes(x = Task, y = score, color = Task),
-             position = position_jitterdodge(0.3),
-             size = 1, shape = 1) +
-  geom_boxplot(data = d_prime,
-               aes(x = Task, y = score, fill = Task),
-               outlier.shape = NA,
-               alpha = .5, width = .2,
-               position = position_dodge(0.7)) +
-  geom_point(size = 3, position = position_dodge(0.2)) +
-  geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.80, position = position_dodge(0.2))+
-  scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  apatheme +
-  xlab("Task") +
-  ylab("d' value")
+write.csv(Mratio, "results/dataset1/clean_Mratio_individual.csv")
 
 
 
 
-## Cross-task correlations
-
-# EM and VP
-corr_EMVP <- Mratio
-
-for (i in 1:nrow(Excl_EM)){
-  corr_EMVP %<>%
-    filter(Pp != Excl_EM[i,1])
-}
-
-cor1 <- tidy(cor.test(corr_EMVP$Mratio[corr_EMVP$Task == "EM"], corr_EMVP$Mratio[corr_EMVP$Task == "VP"]))
-
-Plot_cor1 <- corr_EMVP %>% 
-  filter(Task == "EM" | Task == "VP") %>% 
-  dcast(Pp ~ Task, value.var = "Mratio") %>% 
-  ggplot(aes(x = EM, y = VP)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the EM task") +
-  ylab("Mratio for the VP task") +
-  ggtitle(paste("Correlation is", round(cor1$estimate, 2),"[", round(cor1$conf.low, 3),";",round(cor1$conf.high, 3), "]"))
-
-# EM and SM
-corr_EMSM <- Mratio
-
-for (i in 1:nrow(Excl_EM)){
-  corr_EMSM %<>%
-    filter(Pp != Excl_EM[i,1])
-}
-
-for (i in 1:nrow(Excl_SM)){
-  corr_EMSM %<>%
-    filter(Pp != Excl_SM[i,1])
-}
-
-cor2 <- tidy(cor.test(corr_EMSM$Mratio[corr_EMSM$Task == "EM"], corr_EMSM$Mratio[corr_EMSM$Task == "SM"]))
-
-Plot_cor2 <- corr_EMSM %>% 
-  filter(Task == "EM" | Task == "SM") %>% 
-  dcast(Pp ~ Task, value.var = "Mratio") %>% 
-  ggplot(aes(x = EM, y = SM)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the EM task") +
-  ylab("Mratio for the SM task") +
-  ggtitle(paste("Correlation is", round(cor2$estimate, 2),"[", round(cor2$conf.low, 3),";",round(cor2$conf.high, 3), "]"))
-
-# EM and EF
-corr_EMEF <- Mratio
-
-for (i in 1:nrow(Excl_EM)){
-  corr_EMEF %<>%
-    filter(Pp != Excl_EM[i,1])
-}
-
-for (i in 1:nrow(Excl_EF)){
-  corr_EMEF %<>%
-    filter(Pp != Excl_EF[i,1])
-}
-
-cor3 <- tidy(cor.test(corr_EMEF$Mratio[corr_EMEF$Task == "EM"], corr_EMEF$Mratio[corr_EMEF$Task == "EF"]))
-
-Plot_cor3 <- corr_EMEF %>% 
-  filter(Task == "EM" | Task == "EF") %>% 
-  dcast(Pp ~ Task, value.var = "Mratio") %>% 
-  ggplot(aes(x = EM, y = EF)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the EM task") +
-  ylab("Mratio for the EF task") +
-  ggtitle(paste("Correlation is", round(cor3$estimate, 2),"[", round(cor3$conf.low, 3),";",round(cor3$conf.high, 3), "]"))
-
-# VP and SM
-corr_VPSM <- Mratio
-
-for (i in 1:nrow(Excl_SM)){
-  corr_VPSM %<>%
-    filter(Pp != Excl_SM[i,1])
-}
-
-cor4 <- tidy(cor.test(corr_VPSM$Mratio[corr_VPSM$Task == "VP"], corr_VPSM$Mratio[corr_VPSM$Task == "SM"]))
-
-Plot_cor4 <- corr_VPSM %>% 
-  filter(Task == "VP" | Task == "SM") %>% 
-  dcast(Pp ~ Task, value.var = "Mratio") %>% 
-  ggplot(aes(x = VP, y = SM)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the VP task") +
-  ylab("Mratio for the SM task") +
-  ggtitle(paste("Correlation is", round(cor4$estimate, 2),"[",round(cor4$conf.low, 3),";",round(cor4$conf.high, 3), "]"))
-
-# VP and EF
-corr_VPEF <- Mratio
-
-for (i in 1:nrow(Excl_EF)){
-  corr_VPEF %<>%
-    filter(Pp != Excl_EF[i,1])
-}
-
-cor5 <- tidy(cor.test(corr_VPEF$Mratio[corr_VPEF$Task == "VP"], corr_VPEF$Mratio[corr_VPEF$Task == "EF"]))
-
-Plot_cor5 <- corr_VPEF %>% 
-  filter(Task == "VP" | Task == "EF") %>% 
-  dcast(Pp ~ Task, value.var = "Mratio") %>% 
-  ggplot(aes(x = VP, y = EF)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the VP task") +
-  ylab("Mratio for the EF task") +
-  ggtitle(paste("Correlation is", round(cor5$estimate, 2),"[",round(cor5$conf.low, 3),";",round(cor5$conf.high, 3), "]"))
-
-
-# SM and EF
-corr_SMEF <- Mratio
-
-for (i in 1:nrow(Excl_EF)){
-  corr_SMEF %<>%
-    filter(Pp != Excl_EF[i,1])
-}
-
-for (i in 1:nrow(Excl_SM)){
-  corr_SMEF %<>%
-    filter(Pp != Excl_SM[i,1])
-}
-
-cor6 <- tidy(cor.test(corr_SMEF$Mratio[corr_SMEF$Task == "SM"], corr_SMEF$Mratio[corr_SMEF$Task == "EF"]))
-
-Plot_cor6 <- corr_SMEF %>% 
-  filter(Task == "SM" | Task == "EF") %>% 
-  dcast(Pp ~ Task, value.var = "Mratio") %>% 
-  ggplot(aes(x = SM, y = EF)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the SM task") +
-  ylab("Mratio for the EF task") +
-  ggtitle(paste("Correlation is", round(cor6$estimate, 2),"[",round(cor6$conf.low, 3),";", round(cor6$conf.high, 3), "]"))
-
-
-png(file="./INDIV_COR6.png", width=11, height=8, units="in", res=300)  
-plot_grid(Plot_cor1, Plot_cor2, Plot_cor3,NULL,Plot_cor4, Plot_cor5,NULL,NULL,Plot_cor6, nrow = 3, ncol = 3)
-dev.off()
-
-
-
-## DGI ---------------------------------------------------------------------
-
-DGI <- Mratio %>% 
-  dcast(Pp ~ Task, value.var = "Mratio") %>% 
-  mutate(DGI = ((abs(EF-EM))+(abs(EF-VP))+(abs(EF-SM))+(abs(EM-VP))+(abs(EM-SM))+(abs(SM-VP)))/6) 
 
 
 ## PCA  --------------------------------------------------------------
@@ -922,87 +704,14 @@ for (i in 1:nrow(Excl2)){
 
 DF_PCA %<>% 
   select(Pp, Task, Mratio) %>% 
-  spread(key = Task, value = Mratio) %>% 
+  spread(key = Task, value = Mratio) %>%
   select(-Pp)
 
+DF_PCA2 <- na.omit(DF_PCA)
 
-PCA_Mratio <- princomp(DF_PCA, cor = TRUE, scores = TRUE)
+
+PCA_Mratio <- princomp(DF_PCA2, cor = TRUE, scores = TRUE)
 summary(PCA_Mratio)
 
 
-
-## v-ratio calculation  ----------------------------------------------------
-
-# Arrange data for model 
-
-DF_vratio <-  DF_all_sub %>% 
-  mutate(cor = case_when(
-    Resp == "{LEFTARROW}" & CR == "s"~ 1,
-    Resp == "{RIGHTARROW}" & CR == "s"~ 0,
-    Resp == "{LEFTARROW}" & CR == "l"~ 0,
-    Resp == "{RIGHTARROW}" & CR == "l"~ 1)) %>% 
-  mutate(rt = as.numeric(Resp_RT)/1000,
-         rtcj = as.numeric(Confidence_RT)/1000) %>% 
-  select(Pp, 
-         Task,
-         cor,
-         rt,
-         cj = Confidence,
-         rtcj)
-
-# Fit the data 
-
-# some fitting details 
-itermax <- 1000 #ideally high enough (~1000, depending on convergence)
-trace <- 50
-
-# parameter bounds
-v_range <- c(0,4)
-a_range <- c(.5,4)
-ter_range <- c(.1,1)
-v_ratio_range <- c(0,2.5)
-add_mean_range <- c(0,10) #note, these upper bounds depend a lot on the confidence scale used
-add_sd_range <- c(0,10) #note, these upper bounds depend a lot on the confidence scale used
-
-subj <- unique(DF_vratio$Pp)
-tasks <- unique(DF_vratio$Task)
-conf_levels <- n_distinct(DF_vratio$cj)
-
-V_fit_all_pariticipants <- data.frame()
-
-for (t in tasks) {
-  
-  for (n in subj) {
-    
-    data_indiv <- DF_vratio %>% 
-      filter(Pp == n) %>% 
-      filter(Task == t)
-    
-    fit <- DEoptim(chi_square_optim, 
-                   lower=c(v_range[1],a_range[1],ter_range[1],v_ratio_range[1],add_mean_range[1],add_sd_range[1]), 
-                   upper=c(v_range[2],a_range[2],ter_range[2],v_ratio_range[2],add_mean_range[2],add_sd_range[2]),
-                   observations=data_indiv,
-                   conf_levels=conf_levels,
-                   returnFit=1,
-                   control=list(itermax=itermax, trace=trace, parallelType=1, packages=c("Rcpp")))
-    fitted_params <- round(fit$optim$bestmem, 4)
-    names(fitted_params) <- c("v","a","ter","vratio","add_mean","add_sd")
-    
-    indiv_param <- data.frame(Pp = n,
-                              Task = t,
-                              v = fitted_params['v'],
-                              a = fitted_params['a'],
-                              ter = fitted_params['ter'],
-                              vratio = fitted_params['vratio'],
-                              add_mean = fitted_params['add_mean'],
-                              add_sd = fitted_params['add_sd'])
-    
-    V_fit_all_pariticipants %<>% rbind(indiv_param) 
-    
-  }
-}
-
-# Save individual fits
-
-write.csv(V_fit_all_pariticipants, "results/dataset1/v-ratio_fits.csv")
 
