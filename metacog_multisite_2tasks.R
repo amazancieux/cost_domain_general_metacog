@@ -25,14 +25,6 @@ library(ggmcmc)
 library(cowplot)
 
 
-apatheme=theme_bw()+ #theme
-  theme(panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),
-        panel.border=element_blank(),
-        axis.line=element_line(),
-        text = element_text(size = 11))
-
-
 ## Import data ----------------------------------------------------------------
 
 pp_names_K <- list.files("./rawdata/Krakow_multisite")
