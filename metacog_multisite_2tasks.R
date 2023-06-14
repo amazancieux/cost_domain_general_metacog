@@ -76,7 +76,10 @@ for (i in files_A$value){
 ## Combine dataframe -----------------------------------------------------------
 
 DF_all_sites <- rbind(data_A, data_K) %>% 
-  mutate(Modality = ifelse(BlockType == 1 | BlockType == 11, "Visual", "Auditory")) %>% 
+  filter(BlockType != 11 & BlockType != 12) %>% 
+  mutate(Modality = case_when(
+    BlockType == 1 | BlockType == 21 ~ "Visual", 
+    BlockType == 2 | BlockType == 22 ~ "Auditory")) %>% 
   arrange(Pp)
 
 
@@ -85,6 +88,14 @@ DF_all_sites <- rbind(data_A, data_K) %>%
 Perf <- DF_all_sites %>% 
   filter(!is.nan(correct)) %>% 
   dcast(Pp ~ Modality, value.var = "correct", mean)
+
+
+## Raw confidence  -------------------------------------------------------
+
+Raw_conf <- DF_all_sites %>% 
+  dcast(Pp ~ Modality, value.var = "answ_2", mean)
+
+write.csv(Raw_conf, "./results/dataset3/raw_confidence3.csv")
 
 
 ## Data preparation for Meta-d' model  --------------------------------------------
@@ -180,6 +191,11 @@ for (t in tasks) {
 }
 
 
+# save included participants ID
+sub_id <- data.frame(Pp = sort(unique(DF2$Pp)))
+write.csv2(sub_id, "./results/dataset3/participant_id_H-metad.csv")
+
+
 ## HMeta model ----------------------------------------------------------
 
 for (i in 1:length(nR_S1)) {
@@ -271,7 +287,6 @@ mcmc.sample %>%
   geom_segment(aes(x = HDI$lower[HDI$name == "rho"], y = 80, xend = HDI$upper[HDI$name == "rho"], yend = 80), colour = "white", size = 1.5) +
   apatheme +
   xlim(c(-1, 1)) +
-  ylim(c(0, 4500)) +
   ylab("Sample count") +
   xlab(expression(paste(rho, " value for auditory/visual correlation")))
 
@@ -371,7 +386,7 @@ stat <- list(
   data.frame(),
   data.frame())
 
-nsubj <- nrow(nR_S1_indiv[[2]])
+nsubj <- nrow(nR_S1_indiv[[1]])
 
 
 # Calculate d' and meta-d' per task and per participant
@@ -404,6 +419,7 @@ Auditory <- Perf %>%
   filter(Perf != 'NaN') %>% 
   mutate(metad = stat[[1]][,11],
          d = d[[1]][,1],
+         c = c[[1]][,1],
          Modality = 'Auditory')
 
 Visual <- Perf %>% 
@@ -412,6 +428,7 @@ Visual <- Perf %>%
   filter(Perf != 'NaN') %>% 
   mutate(metad = stat[[2]][,11],
          d = d[[2]][,1],
+         c = c[[2]][,1],
          Modality = 'Visual')
 
 
@@ -419,127 +436,15 @@ write.csv(Auditory, "./results/dataset3/auditory_multi_individual_metad.csv")
 write.csv(Visual, "./results/dataset3/visual_multi_individual_metad.csv")
 
 
-
-## Calculate ratio and plot data ------------------------------------------------------------
+# Performance exclusion criteria
 
 all_data <- Auditory %>% 
   rbind(Visual) %>% 
   mutate(Mratio = metad/d)
 
-# Performance exclusion criteria
-
 all_data %<>%
   filter(Perf > 0.55 & Perf < 0.95)
 
 write.csv2(all_data, "./results/dataset3/clean_individual_Mratio.csv")
-
-
-# First-order performance 
-
-Plot_d <- all_data %>%
-  group_by(Modality) %>%
-  summarise(VD = mean(d),
-            sd = sd(d),
-            se = sd/sqrt(nsubj),
-            CI = se * qt(.975, n() - 1)) %>%
-  ggplot(aes(x = Modality, y = VD, color = Modality)) +
-  geom_point(data = all_data,
-             aes(x = Modality, y = d, color = Modality),
-             position = position_jitterdodge(0.3),
-             size = 1, shape = 1) +
-  geom_boxplot(data = all_data,
-               aes(x = Modality, y = d, fill = Modality),
-               outlier.shape = NA,
-               alpha = .5, width = .2,
-               position = position_dodge(0.7)) +
-  geom_point(size = 3, position = position_dodge(0.2)) +
-  geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.80, position = position_dodge(0.2))+
-  scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  apatheme +
-  xlab("Modality") +
-  ylab("d' value")
-
-# Second-order performance 
-
-Plot_metad <- all_data %>%
-  group_by(Modality) %>%
-  summarise(VD = mean(metad),
-            sd = sd(metad),
-            se = sd/sqrt(nsubj),
-            CI = se * qt(.975, n() - 1)) %>%
-  ggplot(aes(x = Modality, y = VD, color = Modality)) +
-  geom_point(data = all_data,
-             aes(x = Modality, y = metad, color = Modality),
-             position = position_jitterdodge(0.3),
-             size = 1, shape = 1) +
-  geom_boxplot(data = all_data,
-               aes(x = Modality, y = metad, fill = Modality),
-               outlier.shape = NA,
-               alpha = .5, width = .2,
-               position = position_dodge(0.7)) +
-  geom_point(size = 3, position = position_dodge(0.2)) +
-  geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.80, position = position_dodge(0.2))+
-  scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  apatheme +
-  xlab("Task") +
-  ylab("meta-d' value")
-
-
-# Metacognitive efficiency
-
-Plot_Mratio <- all_data %>%
-  group_by(Modality) %>%
-  summarise(VD = mean(Mratio),
-            sd = sd(Mratio),
-            se = sd/sqrt(nsubj),
-            CI = se * qt(.975, n() - 1)) %>%
-  ggplot(aes(x = Modality, y = VD, color = Modality)) +
-  geom_point(data = all_data,
-             aes(x = Modality, y = Mratio, color = Modality),
-             position = position_jitterdodge(0.3),
-             size = 1, shape = 1) +
-  geom_boxplot(data = all_data,
-               aes(x = Modality, y = Mratio, fill = Modality),
-               outlier.shape = NA,
-               alpha = .5, width = .2,
-               position = position_dodge(0.7)) +
-  geom_point(size = 3, position = position_dodge(0.1)) +
-  geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.80, position = position_dodge(0.1))+
-  scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  apatheme +
-  xlab("Modality") +
-  ylab("Mratio value")
-
-
-png(file="./plots/dataset3/INDIV_2_MODALITIES.png", width=10, height=8, units="in", res=300)
-plot_grid(Plot_d, Plot_metad, Plot_Mratio, labels = c("A", "B", "C"), nrow = 2, ncol = 2)
-dev.off()
-
-
-
-## Cross-task correlations
-
-corr_AV <- all_data %>% 
-  dcast(Pp ~ Modality, value.var = 'Mratio') %>% 
-  na.omit(corr_AV)
-
-cor1 <- tidy(cor.test(corr_AV$Auditory, corr_AV$Visual))
-
-Plot_cor1 <- corr_AV %>% 
-  ggplot(aes(x = Auditory, y = Visual)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the auditory modality") +
-  ylab("Mratio for the visual modality") +
-  ggtitle(paste("Correlation is", round(cor1$estimate, 2),"[", round(cor1$conf.low, 3),";",round(cor1$conf.high, 3), "]"))
-
-png(file="./plots/dataset3/INDIV_COR.png", width=4, height=4, units="in", res=300)
-plot_grid(Plot_cor1, nrow = 1, ncol = 1)
-dev.off()
-
-
 
 
