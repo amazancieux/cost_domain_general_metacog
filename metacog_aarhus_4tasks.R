@@ -516,7 +516,7 @@ mean(Diff$SMEF)
 
 # Prepare data
 
-DF3 <- DF2 %>% 
+DF3 <- DF_all_sub %>% 
   mutate(Count = 1,
          Task_num = case_when(
            Task == "EM" ~ 1,
@@ -640,12 +640,19 @@ write.csv(stat, "results/dataset1/output_fit_individual_metad.csv")
 
 # First-order performance 
 
-Pp <- unique(DF3$Pp)
+Pp <- unique(DF_all_sub$Pp)
 d_prime <- data.frame(d) 
+c_values <- data.frame(c)
 names(d_prime) <- c("EM", "VP", "SM", "EF") 
+names(c_values) <- c("EM", "VP", "SM", "EF") 
 d_prime %<>% 
   mutate(Pp = Pp) %>% 
   gather(Task, d, -Pp)
+c_values %<>% 
+  mutate(Pp = Pp) %>% 
+  gather(Task, c, -Pp)
+
+d_prime <- merge(d_prime, c_values, by=c('Pp','Task'))
 
 # Second-order performance 
 
@@ -674,44 +681,6 @@ Mratio_all <- merge(Mratio, Perf2, by=c("Pp","Task"))
 Mratio_all %<>%
   filter(perf >= 0.55 & perf <= 0.95)
 
-# Exclude sub with Mratio > 4
-Mratio_all %<>% 
-  filter(Mratio > 3)
-
-write.csv(Mratio, "results/dataset1/clean_Mratio_individual.csv")
-
-
-
-
-
-
-## PCA  --------------------------------------------------------------
-
-# Exclude paritipants according to performance
-
-DF_PCA <- Mratio
-for (i in 1:nrow(Excl)){
-  DF_PCA %<>%
-    filter(Pp != Excl[i,1])s
-}
-
-for (i in 1:nrow(Excl2)){
-  DF_PCA %<>%
-    filter(Pp != Excl2[i,1])
-}
-
-# Run PCA
-
-DF_PCA %<>% 
-  select(Pp, Task, Mratio) %>% 
-  spread(key = Task, value = Mratio) %>%
-  select(-Pp)
-
-DF_PCA2 <- na.omit(DF_PCA)
-
-
-PCA_Mratio <- princomp(DF_PCA2, cor = TRUE, scores = TRUE)
-summary(PCA_Mratio)
-
+write.csv2(Mratio_all, "results/dataset1/clean_Mratio_individual.csv")
 
 
