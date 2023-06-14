@@ -24,6 +24,13 @@ library(ggpubr)
 library(ggmcmc)
 library(cowplot)
 
+library(Rcpp) 
+library(RcppZiggurat)
+library(DEoptim) 
+library(reshape)
+
+source("vratio_function.R") 
+
 
 apatheme=theme_bw()+ #theme
   theme(panel.grid.major=element_blank(),
@@ -48,6 +55,14 @@ Perf <- DF_all_tasks %>%
   dcast(Pp ~ Modality, value.var = "Acc", mean)
 
 
+## Raw confidence  -------------------------------------------------------
+
+Raw_conf <- DF_all_tasks %>% 
+  dcast(Pp ~ Modality, value.var = "Confidence", mean)
+
+write.csv(Raw_conf, "./results/dataset2/raw_confidence2.csv")
+
+
 ## Data preparation for Meta-d' model  --------------------------------------------
 
 # exclusion of pp that did not performed the 4 tasks
@@ -69,14 +84,14 @@ Excl <- Perf %>%
 Excl2 <- Perf %>% 
   filter(Auditory < 0.55 | Visual < 0.55 | Tactile < 0.55 | Pain < 0.55)
 
-for (i in 1:nrow(To_excl)){
+for (i in 1:nrow(Excl)){
   DF2 %<>%
-    filter(Pp != To_excl[i,1])
+    filter(Pp != Excl[i,1])
 }
 
-for (i in 1:nrow(To_excl)){
+for (i in 1:nrow(Excl2)){
   DF2 %<>%
-    filter(Pp != To_excl[i,1])
+    filter(Pp != Excl2[i,1])
 }
 
 # Prepare data
@@ -152,6 +167,9 @@ for (t in 1:(ntask)) {
   
 }
 
+# save included participants ID
+sub_id <- data.frame(Pp = sort(unique(DF2$Pp)))
+write.csv2(sub_id, "./results/dataset2/participant_id_H-metad.csv")
 
 
 ## HMeta model ----------------------------------------------------------
@@ -355,6 +373,7 @@ DF3 <- DF_all_tasks %>%
            Modality == "Tactile" ~ 3,
            Modality == "Pain" ~ 4))
 
+
 ntask <- n_distinct(DF3$Modality)
 
 nR_S1_indiv <- list(
@@ -505,7 +524,6 @@ write.csv(Tactile, "./results/dataset2/tactile_individual_metad.csv")
 write.csv(Pain, "./results/dataset2/pain_individual_metad.csv")
 
 
-
 ## Calculate ratio and plot data ------------------------------------------------------------
 
 all_data <- Auditory %>% 
@@ -517,211 +535,83 @@ all_data <- Auditory %>%
 # Performance exclusion criteria
 
 all_data %<>%
-  filter(Perf > 0.55 & Perf < 0.95)
+  filter(Perf >= 0.55 & Perf <= 0.95)
 
-# First-order performance 
-
-Plot_d <- all_data %>%
-  group_by(Modality) %>%
-  summarise(VD = mean(d),
-            sd = sd(d),
-            se = sd/sqrt(nsubj),
-            CI = se * qt(.975, n() - 1)) %>%
-  ggplot(aes(x = Modality, y = VD, color = Modality)) +
-  geom_point(data = all_data,
-             aes(x = Modality, y = d, color = Modality),
-             position = position_jitterdodge(0.3),
-             size = 1, shape = 1) +
-  geom_boxplot(data = all_data,
-               aes(x = Modality, y = d, fill = Modality),
-               outlier.shape = NA,
-               alpha = .5, width = .2,
-               position = position_dodge(0.7)) +
-  geom_point(size = 3, position = position_dodge(0.2)) +
-  geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.80, position = position_dodge(0.2))+
-  scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  apatheme +
-  xlab("Modality") +
-  ylab("d' value")
-
-# Second-order performance 
-
-Plot_metad <- all_data %>%
-  group_by(Modality) %>%
-  summarise(VD = mean(metad),
-            sd = sd(metad),
-            se = sd/sqrt(nsubj),
-            CI = se * qt(.975, n() - 1)) %>%
-  ggplot(aes(x = Modality, y = VD, color = Modality)) +
-  geom_point(data = all_data,
-             aes(x = Modality, y = metad, color = Modality),
-             position = position_jitterdodge(0.3),
-             size = 1, shape = 1) +
-  geom_boxplot(data = all_data,
-               aes(x = Modality, y = metad, fill = Modality),
-               outlier.shape = NA,
-               alpha = .5, width = .2,
-               position = position_dodge(0.7)) +
-  geom_point(size = 3, position = position_dodge(0.2)) +
-  geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.80, position = position_dodge(0.2))+
-  scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  apatheme +
-  xlab("Modality") +
-  ylab("meta-d' value")
+# Exlude participants than add issue with number of trials on the tactile task
+all_data <- subset(all_data, all_data$Pp != 65251 | all_data$Modality != "Tactile")
+all_data <- subset(all_data, all_data$Pp != 87127 | all_data$Modality != "Tactile")
 
 
-# Metacognitive efficiency
-
-Plot_Mratio <- all_data %>%
-  group_by(Modality) %>%
-  summarise(VD = mean(Mratio),
-            sd = sd(Mratio),
-            se = sd/sqrt(nsubj),
-            CI = se * qt(.975, n() - 1)) %>%
-  ggplot(aes(x = Modality, y = VD, color = Modality)) +
-  geom_point(data = all_data,
-             aes(x = Modality, y = Mratio, color = Modality),
-             position = position_jitterdodge(0.3),
-             size = 1, shape = 1) +
-  geom_boxplot(data = all_data,
-               aes(x = Modality, y = Mratio, fill = Modality),
-               outlier.shape = NA,
-               alpha = .5, width = .2,
-               position = position_dodge(0.7)) +
-  geom_point(size = 3, position = position_dodge(0.1)) +
-  geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.80, position = position_dodge(0.1))+
-  scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  apatheme +
-  xlab("Modality") +
-  ylab("Mratio value")
-
-
-png(file="./plots/dataset2/INDIV_4MODALITIES.png", width=10, height=8, units="in", res=300)
-plot_grid(Plot_d, Plot_metad, Plot_Mratio, labels = c("A", "B", "C"), nrow = 2, ncol = 2)
-dev.off()
+write.csv2(all_data, "./results/dataset2/Individual_Mratio_forplots.csv")
 
 
 
-## Cross-task correlations
+## v-ratio calculation  ----------------------------------------------------
 
-# auditory and visual 
-corr_AV <- all_data %>% 
-  filter(Modality == 'Auditory' | Modality == 'Visual') %>% 
-  dcast(Pp ~ Modality, value.var = 'Mratio') 
+# Arrange data for model 
 
-corr_AV <- na.omit(corr_AV)
+DF_vratio <-  DF2 %>% 
+  select(Pp, 
+         Modality,
+         cor = Acc,
+         rt = Resp_RT,
+         cj = Confidence,
+         rtcj = Confidence_RT)
 
-cor1 <- tidy(cor.test(corr_AV$Auditory, corr_AV$Visual))
+# Fit the data 
 
-Plot_cor1 <- corr_AV %>% 
-  ggplot(aes(x = Auditory, y = Visual)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the auditory modality") +
-  ylab("Mratio for the visual modality") +
-  ggtitle(paste("Correlation is", round(cor1$estimate, 2),"[", round(cor1$conf.low, 3),";",round(cor1$conf.high, 3), "]"))
+# some fitting details 
+itermax <- 500 #ideally high enough (~1000, depending on convergence)
+trace <- 1
 
+# parameter bounds
+v_range <- c(0,4)
+a_range <- c(.5,4)
+ter_range <- c(.1,10)
+v_ratio_range <- c(0,2.5)
+add_mean_range <- c(0,10) #note, these upper bounds depend a lot on the confidence scale used
+add_sd_range <- c(0,10) #note, these upper bounds depend a lot on the confidence scale used
 
-# auditory and tactile
-corr_AT <- all_data %>% 
-  filter(Modality == 'Auditory' | Modality == 'Tactile') %>% 
-  dcast(Pp ~ Modality, value.var = 'Mratio') 
+subj <- unique(DF_vratio$Pp)
+tasks <- unique(DF_vratio$Modality)
+conf_levels <- n_distinct(DF_vratio$cj)
 
-corr_AT <- na.omit(corr_AT)
+V_fit_all_pariticipants <- data.frame()
 
-cor2 <- tidy(cor.test(corr_AT$Auditory, corr_AT$Tactile))
+for (t in tasks) {
+  
+  for (n in subj) {
+    
+    data_indiv <- DF_vratio %>% 
+      filter(Pp == n) %>% 
+      filter(Modality == t)
+    
+    fit <- DEoptim(chi_square_optim, 
+                   lower=c(v_range[1],a_range[1],ter_range[1],v_ratio_range[1],add_mean_range[1],add_sd_range[1]), 
+                   upper=c(v_range[2],a_range[2],ter_range[2],v_ratio_range[2],add_mean_range[2],add_sd_range[2]),
+                   observations=data_indiv,
+                   conf_levels=conf_levelFit <- read.csv("./results/dataset1/Hierarchial_Mratio.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)s,
+                   returnFit=1,
+                   control=list(itermax=itermax, trace=trace, parallelType=1, packages=c("Rcpp")))
+    fitted_params <- round(fit$optim$bestmem, 4)
+    names(fitted_params) <- c("v","a","ter","vratio","add_mean","add_sd")
+    
+    indiv_param <- data.frame(Pp = n,
+                              Task = t,
+                              v = fitted_params['v'],
+                              a = fitted_params['a'],
+                              ter = fitted_params['ter'],
+                              vratio = fitted_params['vratio'],
+                              add_mean = fitted_params['add_mean'],
+                              add_sd = fitted_params['add_sd'])
+    
+    V_fit_all_pariticipants %<>% rbind(indiv_param) 
+    
+  }
+}
 
-Plot_cor2 <- corr_AT %>% 
-  ggplot(aes(x = Auditory, y = Tactile)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the auditory modality") +
-  ylab("Mratio for the tactile modality") +
-  ggtitle(paste("Correlation is", round(cor2$estimate, 2),"[", round(cor2$conf.low, 3),";",round(cor2$conf.high, 3), "]"))
-
-
-# auditory and pain
-corr_AP <- all_data %>% 
-  filter(Modality == 'Auditory' | Modality == 'Pain') %>% 
-  dcast(Pp ~ Modality, value.var = 'Mratio') 
-
-corr_AP <- na.omit(corr_AP)
-
-cor3 <- tidy(cor.test(corr_AP$Auditory, corr_AP$Pain))
-
-Plot_cor3 <- corr_AP %>% 
-  ggplot(aes(x = Auditory, y = Pain)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the auditory modality") +
-  ylab("Mratio for the pain modality") +
-  ggtitle(paste("Correlation is", round(cor3$estimate, 2),"[", round(cor3$conf.low, 3),";",round(cor3$conf.high, 3), "]"))
-
-
-# visual and tactile
-corr_VT <- all_data %>% 
-  filter(Modality == 'Visual' | Modality == 'Tactile') %>% 
-  dcast(Pp ~ Modality, value.var = 'Mratio') 
-
-corr_VT <- na.omit(corr_VT)
-
-cor4 <- tidy(cor.test(corr_VT$Visual, corr_VT$Tactile))
-
-Plot_cor4 <- corr_VT %>% 
-  ggplot(aes(x = Visual, y = Tactile)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the visual modality") +
-  ylab("Mratio for the tactile modality") +
-  ggtitle(paste("Correlation is", round(cor4$estimate, 2),"[", round(cor4$conf.low, 3),";",round(cor4$conf.high, 3), "]"))
+write.csv(V_fit_all_pariticipants, "results/dataset2/v-ratio_fits.csv")
 
 
-# visual and pain
-corr_VP <- all_data %>% 
-  filter(Modality == 'Visual' | Modality == 'Pain') %>% 
-  dcast(Pp ~ Modality, value.var = 'Mratio') 
-
-corr_VP <- na.omit(corr_VP)
-
-cor5 <- tidy(cor.test(corr_VP$Visual, corr_VP$Pain))
-
-Plot_cor5 <- corr_VP %>% 
-  ggplot(aes(x = Visual, y = Pain)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the visual modality") +
-  ylab("Mratio for the pain modality") +
-  ggtitle(paste("Correlation is", round(cor5$estimate, 2),"[", round(cor5$conf.low, 3),";",round(cor5$conf.high, 3), "]"))
-
-
-# tactivle and pain
-corr_TP <- all_data %>% 
-  filter(Modality == 'Tactile' | Modality == 'Pain') %>% 
-  dcast(Pp ~ Modality, value.var = 'Mratio') 
-
-corr_TP <- na.omit(corr_TP)
-
-cor6 <- tidy(cor.test(corr_TP$Tactile, corr_TP$Pain))
-
-Plot_cor6 <- corr_TP %>% 
-  ggplot(aes(x = Tactile, y = Pain)) +
-  geom_point(shape = 1, colour = "#003366") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the visual modality") +
-  ylab("Mratio for the pain modality") +
-  ggtitle(paste("Correlation is", round(cor6$estimate, 2),"[", round(cor6$conf.low, 3),";",round(cor6$conf.high, 3), "]"))
-
-
-
-png(file="./plots/dataset2/INDIV_COR6.png", width=11, height=8, units="in", res=300)  
-plot_grid(Plot_cor1, Plot_cor2, Plot_cor3,NULL,Plot_cor4, Plot_cor5,NULL,NULL,Plot_cor6, nrow = 3, ncol = 3)
-dev.off()
-
-
-
-
-
-
+hist(data_indiv$rt[data_indiv$cor==1])
+hist(data_indiv$rt[data_indiv$cor==0])
