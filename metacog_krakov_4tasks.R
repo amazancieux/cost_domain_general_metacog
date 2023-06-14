@@ -24,21 +24,6 @@ library(ggpubr)
 library(ggmcmc)
 library(cowplot)
 
-library(Rcpp) 
-library(RcppZiggurat)
-library(DEoptim) 
-library(reshape)
-
-source("vratio_function.R") 
-
-
-apatheme=theme_bw()+ #theme
-  theme(panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),
-        panel.border=element_blank(),
-        axis.line=element_line(),
-        text = element_text(size = 11))
-
 
 ## Import data ----------------------------------------------------------------
 
@@ -546,72 +531,3 @@ write.csv2(all_data, "./results/dataset2/Individual_Mratio_forplots.csv")
 
 
 
-## v-ratio calculation  ----------------------------------------------------
-
-# Arrange data for model 
-
-DF_vratio <-  DF2 %>% 
-  select(Pp, 
-         Modality,
-         cor = Acc,
-         rt = Resp_RT,
-         cj = Confidence,
-         rtcj = Confidence_RT)
-
-# Fit the data 
-
-# some fitting details 
-itermax <- 500 #ideally high enough (~1000, depending on convergence)
-trace <- 1
-
-# parameter bounds
-v_range <- c(0,4)
-a_range <- c(.5,4)
-ter_range <- c(.1,10)
-v_ratio_range <- c(0,2.5)
-add_mean_range <- c(0,10) #note, these upper bounds depend a lot on the confidence scale used
-add_sd_range <- c(0,10) #note, these upper bounds depend a lot on the confidence scale used
-
-subj <- unique(DF_vratio$Pp)
-tasks <- unique(DF_vratio$Modality)
-conf_levels <- n_distinct(DF_vratio$cj)
-
-V_fit_all_pariticipants <- data.frame()
-
-for (t in tasks) {
-  
-  for (n in subj) {
-    
-    data_indiv <- DF_vratio %>% 
-      filter(Pp == n) %>% 
-      filter(Modality == t)
-    
-    fit <- DEoptim(chi_square_optim, 
-                   lower=c(v_range[1],a_range[1],ter_range[1],v_ratio_range[1],add_mean_range[1],add_sd_range[1]), 
-                   upper=c(v_range[2],a_range[2],ter_range[2],v_ratio_range[2],add_mean_range[2],add_sd_range[2]),
-                   observations=data_indiv,
-                   conf_levels=conf_levelFit <- read.csv("./results/dataset1/Hierarchial_Mratio.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)s,
-                   returnFit=1,
-                   control=list(itermax=itermax, trace=trace, parallelType=1, packages=c("Rcpp")))
-    fitted_params <- round(fit$optim$bestmem, 4)
-    names(fitted_params) <- c("v","a","ter","vratio","add_mean","add_sd")
-    
-    indiv_param <- data.frame(Pp = n,
-                              Task = t,
-                              v = fitted_params['v'],
-                              a = fitted_params['a'],
-                              ter = fitted_params['ter'],
-                              vratio = fitted_params['vratio'],
-                              add_mean = fitted_params['add_mean'],
-                              add_sd = fitted_params['add_sd'])
-    
-    V_fit_all_pariticipants %<>% rbind(indiv_param) 
-    
-  }
-}
-
-write.csv(V_fit_all_pariticipants, "results/dataset2/v-ratio_fits.csv")
-
-
-hist(data_indiv$rt[data_indiv$cor==1])
-hist(data_indiv$rt[data_indiv$cor==0])
