@@ -102,10 +102,26 @@ Perf <- DF2 %>%
 
 ## Raw confidence  -------------------------------------------------------
 
-Raw_conf <- DF2 %>% 
+Raw_conf <- DF_all_sub %>% 
   dcast(Pp ~ Task, value.var = "Confidence", mean)
 
 write.csv(Raw_conf, "./results/dataset1/raw_confidence1.csv")
+
+
+
+## Reaction time ---------------------------------------------------------
+
+rt_1 <- DF_all_sub %>% 
+  mutate(Resp_RT = as.numeric(Resp_RT),
+         log_Resp_RT = log(Resp_RT)) %>% 
+  dcast(Pp ~ Task, value.var = "log_Resp_RT", mean)
+
+hist(rt_1$EF)
+hist(rt_1$EM)
+hist(rt_1$SM)
+hist(rt_1$VP)
+
+write.csv(rt_1, "./results/dataset1/reaction_time1.csv")
 
 
 ## Exclusion criteria ----------------------------------------------------
