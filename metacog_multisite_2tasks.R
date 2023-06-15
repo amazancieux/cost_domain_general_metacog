@@ -90,6 +90,20 @@ Raw_conf <- DF_all_sites %>%
 write.csv(Raw_conf, "./results/dataset3/raw_confidence3.csv")
 
 
+## Reaction time ---------------------------------------------------------
+
+rt_3 <- DF_all_sites %>% 
+  mutate(Resp_RT = as.numeric(rt_1)) %>% 
+  filter(Resp_RT > 0) %>% 
+  mutate(log_Resp_RT = log(rt_1)) %>% 
+  dcast(Pp ~ Modality, value.var = "log_Resp_RT", mean)
+
+hist(rt_3$Auditory)
+hist(rt_3$Visual)
+
+write.csv(rt_3, "./results/dataset3/reaction_time3.csv")
+
+
 ## Data preparation for Meta-d' model  --------------------------------------------
 
 DF2 <- DF_all_sites
