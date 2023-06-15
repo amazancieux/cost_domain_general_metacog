@@ -48,6 +48,22 @@ Raw_conf <- DF_all_tasks %>%
 write.csv(Raw_conf, "./results/dataset2/raw_confidence2.csv")
 
 
+## Reaction time ---------------------------------------------------------
+
+rt_2 <- DF_all_tasks %>% 
+  mutate(Resp_RT = as.numeric(Resp_RT)) %>% 
+  filter(Resp_RT > 0) %>% 
+  mutate(log_Resp_RT = log(Resp_RT)) %>% 
+  dcast(Pp ~ Modality, value.var = "log_Resp_RT", mean)
+
+hist(rt_2$Auditory)
+hist(rt_2$Visual)
+hist(rt_2$Tactile)
+hist(rt_2$Pain)
+
+write.csv(rt_2, "./results/dataset2/reaction_time2.csv")
+
+
 ## Data preparation for Meta-d' model  --------------------------------------------
 
 # exclusion of pp that did not performed the 4 tasks
