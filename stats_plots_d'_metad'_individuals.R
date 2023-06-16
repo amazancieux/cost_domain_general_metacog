@@ -31,6 +31,16 @@ conf1 <- read.csv("./results/dataset1/raw_confidence1.csv", header=TRUE, sep=","
 conf2 <- read.csv("./results/dataset2/raw_confidence2.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 conf3 <- read.csv("./results/dataset3/raw_confidence3.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 
+# reaction time
+rt1 <- read.csv("./results/dataset1/reaction_time1.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+rt2 <- read.csv("./results/dataset2/reaction_time2.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+rt3 <- read.csv("./results/dataset3/reaction_time3.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+
+
+# after screening data - outlier exclusion on Mratio for dataset1 > 3
+dataset1 %<>% 
+  filter(Mratio < 3)
+
 # after screening data - outlier exclusion on Mratio for dataset2 > 2.8
 dataset2 %<>% 
   filter(Mratio < 2.8)
@@ -1031,11 +1041,59 @@ dev.off()
 
 
 
-## Individual fits correlation across datasets -----------------------------
+## Correlation across datasets -----------------------------
+
+# Dataset 1 and 3
+
+Mratio_1_3 <- merge(Mratio1, Mratio3, by='Pp')
+
+cor.test(Mratio_1_3$EM, Mratio_1_3$Auditory)
+cor.test(Mratio_1_3$EM, Mratio_1_3$Visual)
+cor.test(Mratio_1_3$VP, Mratio_1_3$Auditory)
+cor.test(Mratio_1_3$VP, Mratio_1_3$Visual)
+cor.test(Mratio_1_3$SM, Mratio_1_3$Auditory)
+cor.test(Mratio_1_3$SM, Mratio_1_3$Visual)
+cor.test(Mratio_1_3$EF, Mratio_1_3$Auditory)
+cor.test(Mratio_1_3$EF, Mratio_1_3$Visual)
+
+conf_clean_1_3 <- merge(conf1_clean_short, conf3_clean_short, by='Pp')
+
+cor.test(conf_clean_1_3$EM, conf_clean_1_3$Auditory)
+cor.test(conf_clean_1_3$EM, conf_clean_1_3$Visual)
+cor.test(conf_clean_1_3$VP, conf_clean_1_3$Auditory)
+cor.test(conf_clean_1_3$VP, conf_clean_1_3$Visual)
+cor.test(conf_clean_1_3$SM, conf_clean_1_3$Auditory)
+cor.test(conf_clean_1_3$SM, conf_clean_1_3$Visual)
+cor.test(conf_clean_1_3$EF, conf_clean_1_3$Auditory)
+cor.test(conf_clean_1_3$EF, conf_clean_1_3$Visual)
+
+# Dataset 2 and 3
+
+Mratio_2_3 <- merge(Mratio2, Mratio3, by='Pp')
+
+cor.test(Mratio_2_3$Auditory.x, Mratio_2_3$Auditory.y)
+cor.test(Mratio_2_3$Auditory.x, Mratio_2_3$Visual.y)
+cor.test(Mratio_2_3$Visual.x, Mratio_2_3$Auditory.y)
+cor.test(Mratio_2_3$Visual.x, Mratio_2_3$Visual.y)
+cor.test(Mratio_2_3$Tactile, Mratio_2_3$Auditory.y)
+cor.test(Mratio_2_3$Tactile, Mratio_2_3$Visual.y)
+cor.test(Mratio_2_3$Pain, Mratio_2_3$Auditory.y)
+cor.test(Mratio_2_3$Pain, Mratio_2_3$Visual.y)
+
+conf_clean_2_3 <- merge(conf2_clean_short, conf3_clean_short, by='Pp')
+
+cor.test(conf_clean_2_3$Auditory.x, conf_clean_2_3$Auditory.y)
+cor.test(conf_clean_2_3$Auditory.x, conf_clean_2_3$Visual.y)
+cor.test(conf_clean_2_3$Visual.x, conf_clean_2_3$Auditory.y)
+cor.test(conf_clean_2_3$Visual.x, conf_clean_2_3$Visual.y)
+cor.test(conf_clean_2_3$Tactile, conf_clean_2_3$Auditory.y)
+cor.test(conf_clean_2_3$Tactile, conf_clean_2_3$Visual.y)
+cor.test(conf_clean_2_3$Pain, conf_clean_2_3$Auditory.y)
+cor.test(conf_clean_2_3$Pain, conf_clean_2_3$Visual.y)
+
 
 
 ## Comparision individual estimates H and non-H --------------------------
-
 
 ## Dataset 1
 
@@ -1088,15 +1146,28 @@ cor.test(dist_estimates$VP, dist_estimates$dist_VP)
 cor.test(dist_estimates$SM, dist_estimates$dist_SM)
 cor.test(dist_estimates$EF, dist_estimates$dist_EF)
 
+# correlation distance and type-1 c
+dist_estimates <- merge(dist_estimates, c1, by = "Pp")
+
+cor.test(dist_estimates$EM, dist_estimates$dist_EM)
+cor.test(dist_estimates$VP, dist_estimates$dist_VP)
+cor.test(dist_estimates$SM, dist_estimates$dist_SM)
+cor.test(dist_estimates$EF, dist_estimates$dist_EF)
+
 # DGI
 
 DGI_1 <- Mratio1 %>% 
   mutate(DGI = ((abs(EF-EM))+(abs(EF-VP))+(abs(EF-SM))+(abs(EM-VP))+(abs(EM-SM))+(abs(SM-VP)))/6) 
 
-cor.test(DGI_1$DGI, dist_estimates$dist_EM)
-cor.test(DGI_1$DGI, dist_estimates$dist_VP)
-cor.test(DGI_1$DGI, dist_estimates$dist_SM)
-cor.test(DGI_1$DGI, dist_estimates$dist_EF)
+DGI_1 %<>%
+  select(Pp, DGI)
+
+DGI_1 <- merge(DGI_1, dist_estimates, by = "Pp")
+
+cor.test(DGI_1$DGI, DGI_1$dist_EM)
+cor.test(DGI_1$DGI, DGI_1$dist_VP)
+cor.test(DGI_1$DGI, DGI_1$dist_SM)
+cor.test(DGI_1$DGI, DGI_1$dist_EF)
 
 ## Dataset 2
 
@@ -1194,6 +1265,7 @@ cor.test(dist_estimates3$Visual, dist_estimates3$dist_Visual)
 
 library(lavaan)
 library(lavaanPlot)
+library(effectsize)
 
 
 # Dataset 1
@@ -1205,18 +1277,6 @@ data_m1 <- Mratio1 %>%
          Mratio_SM = SM, 
          Mratio_EF = EF) 
 
-data_m1 <- merge(data_m1, first_order1, by='Pp')
-data_m1 %<>% 
-  select(Pp, 
-         Mratio_EM, 
-         Mratio_VP, 
-         Mratio_SM, 
-         Mratio_EF,
-         d_EM = EM,
-         d_VP = VP,
-         d_SM = SM,
-         d_EF = EF) 
-
 data_m1 <- merge(data_m1, conf1_clean_short, by='Pp')
 data_m1 %<>% 
   select(Pp, 
@@ -1224,10 +1284,6 @@ data_m1 %<>%
          Mratio_VP, 
          Mratio_SM, 
          Mratio_EF,
-         d_EM,
-         d_VP,
-         d_SM,
-         d_EF,
          conf_EM = EM,
          conf_VP = VP,
          conf_SM = SM,
@@ -1240,36 +1296,12 @@ data_m1 %<>%
          Mratio_VP, 
          Mratio_SM, 
          Mratio_EF,
-         d_EM,
-         d_VP,
-         d_SM,
-         d_EF,
          conf_EM,
          conf_VP,
          conf_SM,
          conf_EF, 
          Mratio_Visual2 = Visual,
          Mratio_Auditory2 = Auditory) 
-
-data_m1 <- merge(data_m1, first_order3, by='Pp')
-data_m1 %<>% 
-  select(Pp, 
-         Mratio_EM, 
-         Mratio_VP, 
-         Mratio_SM, 
-         Mratio_EF,
-         d_EM,
-         d_VP,
-         d_SM,
-         d_EF,
-         conf_EM,
-         conf_VP,
-         conf_SM,
-         conf_EF, 
-         Mratio_Visual2,
-         d_Visual2 = Visual,
-         Mratio_Auditory2,
-         d_Auditory2 = Auditory) 
 
 conf3_clean_short <- conf3_clean %>% 
   dcast(Pp ~ Task, value.var = 'score')
@@ -1281,41 +1313,53 @@ data_m1 %<>%
          Mratio_VP, 
          Mratio_SM, 
          Mratio_EF,
-         d_EM,
-         d_VP,
-         d_SM,
-         d_EF,
          conf_EM,
          conf_VP,
          conf_SM,
          conf_EF, 
          Mratio_Visual2,
-         d_Visual2,
          conf_Visual2 = Visual,
          Mratio_Auditory2,
-         d_Auditory2,
          conf_Auditory2 = Auditory) 
+
+data_m1 <- merge(data_m1, rt1, by='Pp')
+data_m1 %<>% 
+  select(Pp, 
+         Mratio_EM, 
+         Mratio_VP, 
+         Mratio_SM, 
+         Mratio_EF,
+         conf_EM,
+         conf_VP,
+         conf_SM,
+         conf_EF, 
+         rt_EM = EM,
+         rt_VP = VP,
+         rt_SM = SM,
+         rt_EF = EF)
 
 m1 <- '
 # measurement model
-g_perf =~ d_EM + d_VP + d_SM + d_EF + d_Auditory2 + d_Visual2
-g_raw_conf =~ conf_EM + conf_VP + conf_SM + conf_EF + conf_Auditory2 + conf_Visual2
-g_metacog_eff =~ Mratio_EM + Mratio_VP + Mratio_SM + Mratio_EF + Mratio_Auditory2 + Mratio_Visual2
-# regressions
-g_metacog_eff ~ g_perf + g_raw_conf
-'
-m1 <- '
-# measurement model
-g_perf =~ d_EM + d_VP + d_SM + d_EF 
-g_raw_conf =~ conf_EM + conf_VP + conf_SM + conf_EF 
+g_metacog_bias =~ conf_EM + conf_VP + conf_SM + conf_EF 
+g_rt =~ rt_EM + rt_VP + rt_SM + rt_EF 
 g_metacog_eff =~ Mratio_EM + Mratio_VP + Mratio_SM + Mratio_EF 
 # regressions
-g_metacog_eff ~ g_perf + g_raw_conf
+g_metacog_eff ~ g_metacog_bias + g_rt
 '
 
 fit1 <- sem(m1, data=data_m1)
+varTable(fit1)
 summary(fit1, fit.measures=TRUE, standardized=TRUE)
 
+
+M1 <- lm(Mratio_EM ~ conf_EM + c_EM + d_EM + rt_EM, data_m1)
+M2 <- lm(Mratio_VP ~ conf_VP + c_VP + d_VP + rt_VP, data_m1)
+M3 <- lm(Mratio_SM ~ conf_SM + c_SM + d_SM + rt_SM, data_m1)
+M4 <- lm(Mratio_EF ~ conf_EF + c_EF + d_EF + rt_EF, data_m1)
+summary(M1)
+summary(M2)
+summary(M3)
+summary(M4)
 
 lavaanPlot(model = fit1, sig=.05,stars=c("regress","latent","covs"),
            node_options = list(shape = "box", fontname = "Arial"),
@@ -1332,17 +1376,6 @@ data_m2 <- Mratio2 %>%
          Mratio_Tactile = Tactile, 
          Mratio_Pain = Pain) 
 
-data_m2 <- merge(data_m2, first_order2, by='Pp')
-data_m2 %<>% 
-  select(Pp, 
-         Mratio_Auditory, 
-         Mratio_Visual, 
-         Mratio_Tactile, 
-         Mratio_Pain,
-         d_Auditory = Auditory,
-         d_Visual = Visual,
-         d_Tactile = Tactile,
-         d_Pain = Pain) 
 
 conf2_clean_short <- conf2_clean %>% 
   dcast(Pp ~ Task, value.var = 'score')
@@ -1354,10 +1387,6 @@ data_m2 %<>%
          Mratio_Visual, 
          Mratio_Tactile, 
          Mratio_Pain,
-         d_Auditory,
-         d_Visual,
-         d_Tactile,
-         d_Pain,
          conf_Auditory = Auditory,
          conf_Visual = Visual,
          conf_Pain = Pain,
@@ -1370,10 +1399,6 @@ data_m2 %<>%
          Mratio_Visual, 
          Mratio_Tactile, 
          Mratio_Pain,
-         d_Auditory,
-         d_Visual,
-         d_Tactile,
-         d_Pain,
          conf_Auditory,
          conf_Visual,
          conf_Pain,
@@ -1388,10 +1413,6 @@ data_m2 %<>%
          Mratio_Visual, 
          Mratio_Tactile, 
          Mratio_Pain,
-         d_Auditory,
-         d_Visual,
-         d_Tactile,
-         d_Pain,
          conf_Auditory,
          conf_Visual,
          conf_Pain,
@@ -1401,57 +1422,83 @@ data_m2 %<>%
          Mratio_Visual2,
          conf_Visual2 = Visual) 
 
-data_m2 <- merge(data_m2, first_order3, by='Pp')
+
+data_m2 <- merge(data_m2, rt2, by='Pp')
 data_m2 %<>% 
   select(Pp, 
          Mratio_Auditory, 
          Mratio_Visual, 
          Mratio_Tactile, 
          Mratio_Pain,
-         d_Auditory,
-         d_Visual,
-         d_Tactile,
-         d_Pain,
          conf_Auditory,
          conf_Visual,
          conf_Pain,
          conf_Tactile,
          Mratio_Auditory2,
          conf_Auditory2,
-         d_Auditory2 = Auditory,
          Mratio_Visual2,
          conf_Visual2,
-         d_Visual2 = Visual) 
+         rt_Auditory = Auditory,
+         rt_Visual = Visual,
+         rt_Tactile = Tactile, 
+         rt_Pain = Pain) 
+
+data_m2 <- merge(data_m2, rt3, by='Pp')
+data_m2 %<>% 
+  select(Pp, 
+         Mratio_Auditory, 
+         Mratio_Visual, 
+         Mratio_Tactile, 
+         Mratio_Pain,
+         conf_Auditory,
+         conf_Visual,
+         conf_Pain,
+         conf_Tactile,
+         Mratio_Auditory2,
+         conf_Auditory2,
+         Mratio_Visual2,
+         conf_Visual2,
+         rt_Auditory,
+         rt_Visual,
+         rt_Tactile, 
+         rt_Pain,
+         rt_Auditory2 = Auditory,
+         rt_Visual2 = Visual) 
 
 m2 <- '
 # measurement model
-g_raw_conf =~ conf_Auditory + conf_Visual + conf_Tactile + conf_Pain + conf_Auditory2 + conf_Visual2
+g_metacog_bias =~ conf_Auditory + conf_Visual + conf_Tactile + conf_Pain + conf_Auditory2 + conf_Visual2
+g_rt =~ rt_Auditory + rt_Visual + rt_Tactile + rt_Pain + rt_Auditory2 + rt_Visual2
 g_metacog_eff =~ Mratio_Auditory + Mratio_Visual + Mratio_Tactile + Mratio_Pain + Mratio_Auditory2 + Mratio_Visual2
-g_perf =~ d_Auditory + d_Visual + d_Tactile + d_Pain + d_Auditory2 + d_Visual2
 # regressions
-g_metacog_eff ~ g_raw_conf + g_perf
+g_metacog_eff ~ g_metacog_bias + g_rt
 '
+
 m2 <- '
 # measurement model
-g_raw_conf =~ conf_Auditory + conf_Visual + conf_Tactile + conf_Pain 
+g_metacog_bias =~ conf_Auditory + conf_Visual + conf_Tactile + conf_Pain 
+g_rt =~ rt_Auditory + rt_Visual + rt_Tactile + rt_Pain 
 g_metacog_eff =~ Mratio_Auditory + Mratio_Visual + Mratio_Tactile + Mratio_Pain 
-g_perf =~ d_Auditory + d_Visual + d_Tactile + d_Pain
 # regressions
-g_metacog_eff ~ g_raw_conf + g_perf
+g_metacog_eff ~ g_metacog_bias + g_rt
 '
 
 fit2 <- sem(m2, data=data_m2)
+varTable(fit2)
 summary(fit2, fit.measures=TRUE, standardized=TRUE)
 
-png(file="./plots/sem_dataset2.png", width=10, height=10, units="in", res=300)
 lavaanPlot(model = fit2, sig=.05,stars=c("regress","latent","covs"),
            node_options = list(shape = "box", fontname = "Arial"),
            edge_options = list(color = "grey"),
            coefs = TRUE, covs = TRUE, stand=TRUE)
-dev.off()
+
+# Indices of Goodness of Fit
+
+interpret_cfi(0.828)
+interpret_rmsea(0.112)
 
 
-# Dataset 3 only
+# Dataset 3 
 
 data_m3 <- Mratio3 %>% 
   select(Pp, 
@@ -1476,26 +1523,34 @@ data_m3 %<>%
          conf_Auditory = Auditory,
          conf_Visual = Visual) 
 
-m3 <- '
-# measurement model
-g_raw_conf =~ conf_Auditory + conf_Visual 
-g_metacog_eff =~ Mratio_Auditory + Mratio_Visual 
-g_perf =~ d_Auditory + d_Visual 
-# regressions
-g_metacog_eff ~ g_raw_conf + g_perf
-'
+data_m3 <- merge(data_m3, rt3, by='Pp')
+data_m3 %<>% 
+  select(Pp, 
+         Mratio_Auditory, 
+         Mratio_Visual, 
+         d_Auditory,
+         d_Visual,
+         conf_Auditory,
+         rt_Auditory = Auditory,
+         conf_Visual,
+         rt_Visual = Visual) 
+
 
 m3 <- '
 # measurement model
-g_raw_conf =~ conf_Auditory + conf_Visual 
+g_metacog_bias =~ conf_Auditory + conf_Visual 
 g_metacog_eff =~ Mratio_Auditory + Mratio_Visual 
+g_rt =~ rt_Auditory + rt_Visual 
 # regressions
-g_metacog_eff ~ g_raw_conf 
+g_metacog_eff ~ g_metacog_bias + g_rt
 '
 
-fit3 <- sem(m3, data=data_m3)
+fit3 <- sem(m3, data=data_m3, estimator = 'DWLS')
+varTable(fit3)
 summary(fit3, fit.measures=TRUE, standardized=TRUE)
 
+interpret_cfi(0.993)
+interpret_rmsea(0.033)
 
 lavaanPlot(model = fit3, sig=.05,stars=c("regress","latent","covs"),
            node_options = list(shape = "box", fontname = "Arial"),
@@ -1503,5 +1558,20 @@ lavaanPlot(model = fit3, sig=.05,stars=c("regress","latent","covs"),
            coefs = TRUE, covs = TRUE, stand=TRUE)
 
 
+
+
+## Exploratory structures --------------------------------------------------
+
+Mratio1_long <- Mratio1 %>% 
+  select(Pp, EM, VP, SM, EF) %>% 
+  gather(Task, Mratio, -Pp)
+
+Mratio2_long <- Mratio2 %>% 
+  select(Pp, Auditory, Visual, Tactile, Pain) %>% 
+  gather(Task, Mratio, -Pp)
+
+Mratio3_long <- Mratio3 %>% 
+  select(Pp, Auditory, Visual) %>% 
+  gather(Task, Mratio, -Pp)
 
 
