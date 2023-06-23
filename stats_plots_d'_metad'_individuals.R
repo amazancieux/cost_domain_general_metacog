@@ -1289,38 +1289,6 @@ data_m1 %<>%
          conf_SM = SM,
          conf_EF = EF) 
 
-data_m1 <- merge(data_m1, Mratio3, by='Pp')
-data_m1 %<>% 
-  select(Pp, 
-         Mratio_EM, 
-         Mratio_VP, 
-         Mratio_SM, 
-         Mratio_EF,
-         conf_EM,
-         conf_VP,
-         conf_SM,
-         conf_EF, 
-         Mratio_Visual2 = Visual,
-         Mratio_Auditory2 = Auditory) 
-
-conf3_clean_short <- conf3_clean %>% 
-  dcast(Pp ~ Task, value.var = 'score')
-
-data_m1 <- merge(data_m1, conf3_clean_short, by='Pp')
-data_m1 %<>% 
-  select(Pp, 
-         Mratio_EM, 
-         Mratio_VP, 
-         Mratio_SM, 
-         Mratio_EF,
-         conf_EM,
-         conf_VP,
-         conf_SM,
-         conf_EF, 
-         Mratio_Visual2,
-         conf_Visual2 = Visual,
-         Mratio_Auditory2,
-         conf_Auditory2 = Auditory) 
 
 data_m1 <- merge(data_m1, rt1, by='Pp')
 data_m1 %<>% 
@@ -1347,10 +1315,11 @@ g_metacog_eff =~ Mratio_EM + Mratio_VP + Mratio_SM + Mratio_EF
 g_metacog_eff ~ g_metacog_bias + g_rt
 '
 
-fit1 <- sem(m1, data=data_m1)
+fit1 <- sem(m1, data=data_m1, missing="ml")
 varTable(fit1)
 summary(fit1, fit.measures=TRUE, standardized=TRUE)
 
+interpret(fit1)
 
 M1 <- lm(Mratio_EM ~ conf_EM + c_EM + d_EM + rt_EM, data_m1)
 M2 <- lm(Mratio_VP ~ conf_VP + c_VP + d_VP + rt_VP, data_m1)
@@ -1392,37 +1361,6 @@ data_m2 %<>%
          conf_Pain = Pain,
          conf_Tactile = Tactile) 
 
-data_m2 <- merge(data_m2, Mratio3, by='Pp')
-data_m2 %<>% 
-  select(Pp, 
-         Mratio_Auditory, 
-         Mratio_Visual, 
-         Mratio_Tactile, 
-         Mratio_Pain,
-         conf_Auditory,
-         conf_Visual,
-         conf_Pain,
-         conf_Tactile,
-         Mratio_Auditory2 = Auditory,
-         Mratio_Visual2 = Visual) 
-
-data_m2 <- merge(data_m2, conf3_clean_short, by='Pp')
-data_m2 %<>% 
-  select(Pp, 
-         Mratio_Auditory, 
-         Mratio_Visual, 
-         Mratio_Tactile, 
-         Mratio_Pain,
-         conf_Auditory,
-         conf_Visual,
-         conf_Pain,
-         conf_Tactile,
-         Mratio_Auditory2,
-         conf_Auditory2 = Auditory,
-         Mratio_Visual2,
-         conf_Visual2 = Visual) 
-
-
 data_m2 <- merge(data_m2, rt2, by='Pp')
 data_m2 %<>% 
   select(Pp, 
@@ -1434,45 +1372,10 @@ data_m2 %<>%
          conf_Visual,
          conf_Pain,
          conf_Tactile,
-         Mratio_Auditory2,
-         conf_Auditory2,
-         Mratio_Visual2,
-         conf_Visual2,
          rt_Auditory = Auditory,
          rt_Visual = Visual,
          rt_Tactile = Tactile, 
          rt_Pain = Pain) 
-
-data_m2 <- merge(data_m2, rt3, by='Pp')
-data_m2 %<>% 
-  select(Pp, 
-         Mratio_Auditory, 
-         Mratio_Visual, 
-         Mratio_Tactile, 
-         Mratio_Pain,
-         conf_Auditory,
-         conf_Visual,
-         conf_Pain,
-         conf_Tactile,
-         Mratio_Auditory2,
-         conf_Auditory2,
-         Mratio_Visual2,
-         conf_Visual2,
-         rt_Auditory,
-         rt_Visual,
-         rt_Tactile, 
-         rt_Pain,
-         rt_Auditory2 = Auditory,
-         rt_Visual2 = Visual) 
-
-m2 <- '
-# measurement model
-g_metacog_bias =~ conf_Auditory + conf_Visual + conf_Tactile + conf_Pain + conf_Auditory2 + conf_Visual2
-g_rt =~ rt_Auditory + rt_Visual + rt_Tactile + rt_Pain + rt_Auditory2 + rt_Visual2
-g_metacog_eff =~ Mratio_Auditory + Mratio_Visual + Mratio_Tactile + Mratio_Pain + Mratio_Auditory2 + Mratio_Visual2
-# regressions
-g_metacog_eff ~ g_metacog_bias + g_rt
-'
 
 m2 <- '
 # measurement model
@@ -1483,19 +1386,16 @@ g_metacog_eff =~ Mratio_Auditory + Mratio_Visual + Mratio_Tactile + Mratio_Pain
 g_metacog_eff ~ g_metacog_bias + g_rt
 '
 
-fit2 <- sem(m2, data=data_m2)
+fit2 <- sem(m2, data=data_m2, missing="ml")
 varTable(fit2)
 summary(fit2, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit2)
 
 lavaanPlot(model = fit2, sig=.05,stars=c("regress","latent","covs"),
            node_options = list(shape = "box", fontname = "Arial"),
            edge_options = list(color = "grey"),
            coefs = TRUE, covs = TRUE, stand=TRUE)
-
-# Indices of Goodness of Fit
-
-interpret_cfi(0.828)
-interpret_rmsea(0.112)
 
 
 # Dataset 3 
@@ -1512,6 +1412,9 @@ data_m3 %<>%
          Mratio_Visual, 
          d_Auditory = Auditory,
          d_Visual = Visual) 
+
+conf3_clean_short <- conf3_clean %>% 
+  dcast(Pp ~ Task, value.var = 'score')
 
 data_m3 <- merge(data_m3, conf3_clean_short, by='Pp')
 data_m3 %<>% 
@@ -1549,8 +1452,6 @@ fit3 <- sem(m3, data=data_m3, estimator = 'DWLS')
 varTable(fit3)
 summary(fit3, fit.measures=TRUE, standardized=TRUE)
 
-interpret_cfi(0.993)
-interpret_rmsea(0.033)
 
 lavaanPlot(model = fit3, sig=.05,stars=c("regress","latent","covs"),
            node_options = list(shape = "box", fontname = "Arial"),
