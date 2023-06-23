@@ -655,3 +655,45 @@ all_data_D2 <- Auditory_D2 %>%
 
 write.csv2(all_data_D2, "./results/dataset2/Individual_Mratio_D2.csv")
 
+
+
+## Individual stats and plots -------------------------------------------
+
+all_data_D2 <- read.csv("./results/dataset2/Individual_Mratio_D2.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+all_data_D1 <- read.csv("./results/dataset2/Individual_Mratio_D1.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+
+all_data_D1 %<>%
+  mutate(Difficulty = "Difficulty 1")
+
+all_data_D2 %<>%
+  mutate(Difficulty = "Difficulty 2")
+
+all_diff <- all_data_D1 %>% 
+  rbind(all_data_D2)
+
+nsubj <- n_distinct(all_diff$Pp)
+
+all_diff %>%
+  group_by(Modality, Difficulty) %>%
+  summarise(VD = mean(d),
+            sd = sd(d),
+            se = sd/sqrt(nsubj),
+            CI = se * qt(.975, n() - 1)) %>%
+  ggplot(aes(x = Task, y = VD, color = Task)) +
+  geom_point(data = dataset1,
+             aes(x = Task, y = d, color = Task),
+             position = position_jitterdodge(2),
+             size = 1, alpha = 0.2, 
+             show.legend = FALSE) +
+  geom_boxplot(data = dataset1,
+               aes(x = Task, y = d, fill = Task),
+               outlier.shape = NA,
+               alpha = .5, width = .2,
+               position = position_dodge(2), 
+               show.legend = FALSE) +
+  geom_point(size = 1, color = 'black', position = position_dodge(0)) +
+  geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0))+
+  scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
+  scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
+  xlab("Task") +
+  ylab("d' value")
