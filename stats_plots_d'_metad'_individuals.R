@@ -1452,7 +1452,6 @@ fit3 <- sem(m3, data=data_m3, estimator = 'DWLS')
 varTable(fit3)
 summary(fit3, fit.measures=TRUE, standardized=TRUE)
 
-
 lavaanPlot(model = fit3, sig=.05,stars=c("regress","latent","covs"),
            node_options = list(shape = "box", fontname = "Arial"),
            edge_options = list(color = "grey"),
