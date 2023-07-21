@@ -92,6 +92,20 @@ DF2 %<>%
            Modality == "Tactile" ~ 3,
            Modality == "Pain" ~ 4))
 
+
+# Careful, label 1 and 2 have been inverted for the tactile and pain modalies
+# Diff 1 are easy trials and diff 2 are hard trials
+DF2 %<>%
+  mutate(Diff = case_when(
+    Modality == "Auditory" & Diff == 1 ~ 1,
+    Modality == "Auditory" & Diff == 2 ~ 2,
+    Modality == "Visual" & Diff == 1 ~ 1,
+    Modality == "Visual" & Diff == 2 ~ 2,
+    Modality == "Tactile" & Diff == 1 ~ 2,
+    Modality == "Tactile" & Diff == 2 ~ 1,
+    Modality == "Pain" & Diff == 1 ~ 2,
+    Modality == "Pain" & Diff == 2 ~ 1))
+
 ntask <- n_distinct(DF2$Modality)
 
 nR_S1_D1 <- list(
@@ -312,7 +326,7 @@ write.csv(mcmc.sample, "./results/dataset2/Hierarchial_mcmc_sample_D1.csv")
 
 
 
-## Individual meta-d' - Difficulty 1 -------------------------------------
+## Individual meta-d' - Difficulty 1 - Easy trials -------------------------------------
 
 # Prepare data
 
@@ -484,8 +498,7 @@ write.csv2(all_data_D1, "./results/dataset2/Individual_Mratio_D1.csv")
 
 
 
-
-## Individual meta-d' - Difficulty 2 ---------------------------------------
+## Individual meta-d' - Difficulty 2 - Hard trials ---------------------------------------
 
 # Prepare data
 
@@ -657,10 +670,13 @@ write.csv2(all_data_D2, "./results/dataset2/Individual_Mratio_D2.csv")
 
 
 
-## Individual stats and plots -------------------------------------------
+## Stats and correlations -------------------------------------------
 
-all_data_D2 <- read.csv("./results/dataset2/Individual_Mratio_D2.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-all_data_D1 <- read.csv("./results/dataset2/Individual_Mratio_D1.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+# Careful, label 1 and 2 have been inverted for the tactile and pain modalies
+# Diff 1 are easy trials and diff 2 are hard trials
+
+all_data_D2 <- read.csv("./results/dataset2/Individual_Mratio_D2.csv", header=TRUE, sep=";", dec=",", fill  = TRUE)
+all_data_D1 <- read.csv("./results/dataset2/Individual_Mratio_D1.csv", header=TRUE, sep=";", dec=",", fill  = TRUE)
 
 all_data_D1 %<>%
   mutate(Difficulty = "Difficulty 1")
@@ -671,29 +687,95 @@ all_data_D2 %<>%
 all_diff <- all_data_D1 %>% 
   rbind(all_data_D2)
 
-nsubj <- n_distinct(all_diff$Pp)
 
-all_diff %>%
+# Descriptives
+
+summary_all_diff <- all_diff %>% 
+  filter_all(all_vars(!is.infinite(.))) %>%
   group_by(Modality, Difficulty) %>%
-  summarise(VD = mean(d),
-            sd = sd(d),
-            se = sd/sqrt(nsubj),
-            CI = se * qt(.975, n() - 1)) %>%
-  ggplot(aes(x = Task, y = VD, color = Task)) +
-  geom_point(data = dataset1,
-             aes(x = Task, y = d, color = Task),
-             position = position_jitterdodge(2),
-             size = 1, alpha = 0.2, 
-             show.legend = FALSE) +
-  geom_boxplot(data = dataset1,
-               aes(x = Task, y = d, fill = Task),
-               outlier.shape = NA,
-               alpha = .5, width = .2,
-               position = position_dodge(2), 
-               show.legend = FALSE) +
-  geom_point(size = 1, color = 'black', position = position_dodge(0)) +
-  geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0))+
-  scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
-  xlab("Task") +
-  ylab("d' value")
+  summarise(d_mean = mean(d),
+            d_sd = sd(d),
+            metad_mean = mean(metad),
+            metad_sd = sd(metad),
+            Mratio_mean = mean(Mratio, na.rm = TRUE),
+            Mratio_sd = sd(Mratio, na.rm = TRUE))
+
+
+# First-order performance differences
+
+all_diff_d <- all_diff %>% 
+  dcast(Pp ~ Modality + Difficulty, value.var = "d", mean) %>% 
+  mutate(D1 = `Auditory_Difficulty 1` - `Auditory_Difficulty 2`,
+         D2 = `Visual_Difficulty 1` - `Visual_Difficulty 2`,
+         D3 = `Tactile_Difficulty 1` - `Tactile_Difficulty 2`,
+         D4 = `Pain_Difficulty 1` - `Pain_Difficulty 2`) 
+
+D1 <- lm(D1 ~ 1, all_diff_d)
+D2 <- lm(D2 ~ 1, all_diff_d)
+D3 <- lm(D3 ~ 1, all_diff_d)
+D4 <- lm(D4 ~ 1, all_diff_d)
+
+qqnorm(residuals(D1))
+qqline(residuals(D1))
+
+data.frame(x = residuals(D1)) %>%
+  ggplot(aes(x = x)) +
+  geom_histogram()
+shapiro.test(residuals(D1))
+
+summary(D1)
+summary(D2)
+summary(D3)
+summary(D4)
+
+
+# M-ratio differences
+
+all_diff_mratio <- all_diff %>% 
+  filter_all(all_vars(!is.infinite(.))) %>% 
+  filter(Mratio < 4) %>% 
+  dcast(Pp ~ Modality + Difficulty, value.var = "Mratio") %>% 
+  mutate(D1 = `Auditory_Difficulty 1` - `Auditory_Difficulty 2`,
+         D2 = `Visual_Difficulty 1` - `Visual_Difficulty 2`,
+         D3 = `Tactile_Difficulty 1` - `Tactile_Difficulty 2`,
+         D4 = `Pain_Difficulty 1` - `Pain_Difficulty 2`) 
+
+D1 <- lm(D1 ~ 1, all_diff_mratio)
+D2 <- lm(D2 ~ 1, all_diff_mratio)
+D3 <- lm(D3 ~ 1, all_diff_mratio)
+D4 <- lm(D4 ~ 1, all_diff_mratio)
+
+qqnorm(residuals(D1))
+qqline(residuals(D1))
+
+data.frame(x = residuals(D1)) %>%
+  ggplot(aes(x = x)) +
+  geom_histogram()
+shapiro.test(residuals(D1))
+
+summary(D1)
+summary(D2)
+summary(D3)
+summary(D4)
+
+
+# Correlations
+
+# Hard trials
+cor.test(all_diff_mratio$`Auditory_Difficulty 1`, all_diff_mratio$`Visual_Difficulty 1`)
+cor.test(all_diff_mratio$`Auditory_Difficulty 1`, all_diff_mratio$`Tactile_Difficulty 2`)
+cor.test(all_diff_mratio$`Auditory_Difficulty 1`, all_diff_mratio$`Pain_Difficulty 2`)
+cor.test(all_diff_mratio$`Visual_Difficulty 1`, all_diff_mratio$`Tactile_Difficulty 2`)
+cor.test(all_diff_mratio$`Visual_Difficulty 1`, all_diff_mratio$`Pain_Difficulty 2`)
+cor.test(all_diff_mratio$`Tactile_Difficulty 2`, all_diff_mratio$`Pain_Difficulty 2`)
+
+# Easy trials
+cor.test(all_diff_mratio$`Auditory_Difficulty 2`, all_diff_mratio$`Visual_Difficulty 2`)
+cor.test(all_diff_mratio$`Auditory_Difficulty 2`, all_diff_mratio$`Tactile_Difficulty 1`)
+cor.test(all_diff_mratio$`Auditory_Difficulty 2`, all_diff_mratio$`Pain_Difficulty 1`)
+cor.test(all_diff_mratio$`Visual_Difficulty 2`, all_diff_mratio$`Tactile_Difficulty 1`)
+cor.test(all_diff_mratio$`Visual_Difficulty 2`, all_diff_mratio$`Pain_Difficulty 1`)
+cor.test(all_diff_mratio$`Tactile_Difficulty 1`, all_diff_mratio$`Pain_Difficulty 1`)
+
+
+
