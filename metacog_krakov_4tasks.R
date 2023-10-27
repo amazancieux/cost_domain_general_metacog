@@ -40,10 +40,20 @@ Perf <- DF_all_tasks %>%
   dcast(Pp ~ Modality, value.var = "Acc", mean)
 
 
+write.csv(Perf, "./results/dataset2/proportion_correct2.csv")
+
+
 ## Raw confidence  -------------------------------------------------------
 
 Raw_conf <- DF_all_tasks %>% 
-  dcast(Pp ~ Modality, value.var = "Confidence", mean)
+  mutate(Conf = case_when(
+    Confidence == 1 ~ 50,
+    Confidence == 2 ~ 60,
+    Confidence == 3 ~ 70,
+    Confidence == 4 ~ 80,
+    Confidence == 5 ~ 90,
+    Confidence == 6 ~ 100)) %>% 
+  dcast(Pp ~ Modality, value.var = "Conf", mean)
 
 write.csv(Raw_conf, "./results/dataset2/raw_confidence2.csv")
 
