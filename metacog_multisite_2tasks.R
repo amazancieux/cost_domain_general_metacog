@@ -82,10 +82,19 @@ Perf <- DF_all_sites %>%
   dcast(Pp ~ Modality, value.var = "correct", mean)
 
 
+write.csv(Perf, "./results/dataset3/proportion_correct3.csv")
+
 ## Raw confidence  -------------------------------------------------------
 
 Raw_conf <- DF_all_sites %>% 
-  dcast(Pp ~ Modality, value.var = "answ_2", mean)
+  mutate(Conf = case_when(
+    answ_2 == 1 ~ 50,
+    answ_2 == 2 ~ 60,
+    answ_2 == 3 ~ 70,
+    answ_2 == 4 ~ 80,
+    answ_2 == 5 ~ 90,
+    answ_2 == 6 ~ 100)) %>% 
+  dcast(Pp ~ Modality, value.var = "Conf", mean)
 
 write.csv(Raw_conf, "./results/dataset3/raw_confidence3.csv")
 
