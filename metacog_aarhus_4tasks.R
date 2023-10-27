@@ -98,12 +98,20 @@ Perf <- DF2 %>%
     Resp == "{RIGHTARROW}" & CR == "l"~ 1)) %>% 
   dcast(Pp ~ Task, value.var = "Acc", mean)
 
+write.csv(Perf, "./results/dataset1/proportion_correct1.csv")
 
 
 ## Raw confidence  -------------------------------------------------------
 
 Raw_conf <- DF_all_sub %>% 
-  dcast(Pp ~ Task, value.var = "Confidence", mean)
+  mutate(Conf = case_when(
+    Confidence == 1 ~ 50,
+    Confidence == 2 ~ 60,
+    Confidence == 3 ~ 70,
+    Confidence == 4 ~ 80,
+    Confidence == 5 ~ 90,
+    Confidence == 6 ~ 100)) %>% 
+  dcast(Pp ~ Task, value.var = "Conf", mean)
 
 write.csv(Raw_conf, "./results/dataset1/raw_confidence1.csv")
 
