@@ -1,8 +1,9 @@
 #####################################
 
 
-# Statistics and plots for first-order performance and 
-# individuals meta-d' for the 3 datasets
+# Statistics and plots for first-order performance and
+# metacognitive bias, and individuals M-ratio as well as
+# CFA and SEM for the 3 datasets
 # COST action "The neural architecture of consciousness"
 
 # Audrey Mazancieux 2023
@@ -15,8 +16,13 @@
 library(tidyverse)
 library(magrittr)
 library(reshape2)
+library(broom)
 library(cowplot)
 library(lattice)
+library(lavaan)
+library(lavaanPlot)
+library(effectsize)
+library(AICcmodavg)
 
 
 ## Import preprocessed data -----------------------------------------------------------
@@ -30,6 +36,11 @@ dataset3 <- read.csv("./results/dataset3/clean_individual_Mratio.csv", header=TR
 conf1 <- read.csv("./results/dataset1/raw_confidence1.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 conf2 <- read.csv("./results/dataset2/raw_confidence2.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 conf3 <- read.csv("./results/dataset3/raw_confidence3.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+
+# Proportion correct type-1 
+perf1 <- read.csv("./results/dataset1/proportion_correct1.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+perf2 <- read.csv("./results/dataset2/proportion_correct2.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+perf3 <- read.csv("./results/dataset3/proportion_correct3.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 
 # reaction time
 rt1 <- read.csv("./results/dataset1/reaction_time1.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
@@ -180,7 +191,7 @@ sd(first_order3$Visual)
 
 
 
-## Raw confidence all dataset (stats) --------------------------------------
+## Metacognitive bias all dataset (stats) --------------------------------------
 
 ## Dataset 1
 
@@ -231,10 +242,18 @@ conf1_clean <- conf_EM %>%
         conf_SM,
         conf_EF) 
 
+perf1 %<>%
+  select(-X) %>% 
+  gather(Task, Perf,
+         -Pp)
+
+bias1 <- merge(conf1_clean, perf1, by=c("Pp", "Task"))
+
 # statistics
 
-conf1_clean %<>%  
-  dcast(Pp ~ Task, value.var = "Conf") %>% 
+bias1 %<>%  
+  mutate(bias = (Conf/100) - Perf) %>% 
+  dcast(Pp ~ Task, value.var = "bias") %>% 
   mutate(D1 = EM - VP,
          D2 = EM - SM,
          D3 = EM - EF,
@@ -242,12 +261,12 @@ conf1_clean %<>%
          D5 = VP - EF,
          D6 = SM - EF) 
 
-D1 <- lm(D1 ~ 1, conf1_clean)
-D2 <- lm(D2 ~ 1, conf1_clean)
-D3 <- lm(D3 ~ 1, conf1_clean)
-D4 <- lm(D4 ~ 1, conf1_clean)
-D5 <- lm(D5 ~ 1, conf1_clean)
-D6 <- lm(D6 ~ 1, conf1_clean)
+D1 <- lm(D1 ~ 1, bias1)
+D2 <- lm(D2 ~ 1, bias1)
+D3 <- lm(D3 ~ 1, bias1)
+D4 <- lm(D4 ~ 1, bias1)
+D5 <- lm(D5 ~ 1, bias1)
+D6 <- lm(D6 ~ 1, bias1)
 
 qqnorm(residuals(D1))
 qqline(residuals(D1))
@@ -258,30 +277,30 @@ data.frame(x = residuals(D1)) %>%
 shapiro.test(residuals(D1))
 
 summary(D1)
-mean(conf1_clean$EM, na.rm = TRUE)
-mean(conf1_clean$VP, na.rm = TRUE)
-sd(conf1_clean$EM, na.rm = TRUE)
-sd(conf1_clean$VP, na.rm = TRUE)
+mean(bias1$EM, na.rm = TRUE)
+mean(bias1$VP, na.rm = TRUE)
+sd(bias1$EM, na.rm = TRUE)
+sd(bias1$VP, na.rm = TRUE)
 
 summary(D2)
-mean(conf1_clean$SM, na.rm = TRUE)
-sd(conf1_clean$SM, na.rm = TRUE)
+mean(bias1$SM, na.rm = TRUE)
+sd(bias1$SM, na.rm = TRUE)
 
 summary(D3)
-mean(conf1_clean$EF, na.rm = TRUE)
-sd(conf1_clean$EF, na.rm = TRUE)
+mean(bias1$EF, na.rm = TRUE)
+sd(bias1$EF, na.rm = TRUE)
 
 summary(D4)
 summary(D5)
 summary(D6)
 
 # correlations
-cor.test(conf1_clean$EM, conf1_clean$VP)
-cor.test(conf1_clean$EM, conf1_clean$SM)
-cor.test(conf1_clean$EM, conf1_clean$EF)
-cor.test(conf1_clean$VP, conf1_clean$SM)
-cor.test(conf1_clean$VP, conf1_clean$EF)
-cor.test(conf1_clean$SM, conf1_clean$EF)
+cor.test(bias1$EM, bias1$VP)
+cor.test(bias1$EM, bias1$SM)
+cor.test(bias1$EM, bias1$EF)
+cor.test(bias1$VP, bias1$SM)
+cor.test(bias1$VP, bias1$EF)
+cor.test(bias1$SM, bias1$EF)
 
 
 ## Dataset 2
@@ -340,8 +359,16 @@ conf2_clean <- conf_Auditory %>%
 
 # statistics
 
-conf2_clean %<>%  
-  dcast(Pp ~ Task, value.var = "Conf") %>% 
+perf2 %<>%
+  select(-X) %>% 
+  gather(Task, Perf,
+         -Pp)
+
+bias2 <- merge(conf2_clean, perf2, by=c("Pp", "Task"))
+
+bias2 %<>%  
+  mutate(bias = (Conf/100) - Perf) %>% 
+  dcast(Pp ~ Task, value.var = "bias") %>% 
   mutate(D1 = Auditory - Visual,
          D2 = Auditory - Tactile,
          D3 = Auditory - Pain,
@@ -349,12 +376,12 @@ conf2_clean %<>%
          D5 = Visual - Pain,
          D6 = Tactile - Pain) 
 
-D1 <- lm(D1 ~ 1, conf2_clean)
-D2 <- lm(D2 ~ 1, conf2_clean)
-D3 <- lm(D3 ~ 1, conf2_clean)
-D4 <- lm(D4 ~ 1, conf2_clean)
-D5 <- lm(D5 ~ 1, conf2_clean)
-D6 <- lm(D6 ~ 1, conf2_clean)
+D1 <- lm(D1 ~ 1, bias2)
+D2 <- lm(D2 ~ 1, bias2)
+D3 <- lm(D3 ~ 1, bias2)
+D4 <- lm(D4 ~ 1, bias2)
+D5 <- lm(D5 ~ 1, bias2)
+D6 <- lm(D6 ~ 1, bias2)
 
 qqnorm(residuals(D1))
 qqline(residuals(D1))
@@ -365,30 +392,30 @@ data.frame(x = residuals(D1)) %>%
 shapiro.test(residuals(D1))
 
 summary(D1)
-mean(conf2_clean$Auditory, na.rm = TRUE)
-mean(conf2_clean$Visual, na.rm = TRUE)
-sd(conf2_clean$Auditory, na.rm = TRUE)
-sd(conf2_clean$Visual, na.rm = TRUE)
+mean(bias2$Auditory, na.rm = TRUE)
+mean(bias2$Visual, na.rm = TRUE)
+sd(bias2$Auditory, na.rm = TRUE)
+sd(bias2$Visual, na.rm = TRUE)
 
 summary(D2)
-mean(conf2_clean$Tactile, na.rm = TRUE)
-sd(conf2_clean$Tactile, na.rm = TRUE)
+mean(bias2$Tactile, na.rm = TRUE)
+sd(bias2$Tactile, na.rm = TRUE)
 
 summary(D3)
-mean(conf2_clean$Pain, na.rm = TRUE)
-sd(conf2_clean$Pain, na.rm = TRUE)
+mean(bias2$Pain, na.rm = TRUE)
+sd(bias2$Pain, na.rm = TRUE)
 
 summary(D4)
 summary(D5)
 summary(D6)
 
 # correlations
-cor.test(conf2_clean$Auditory, conf2_clean$Visual)
-cor.test(conf2_clean$Auditory, conf2_clean$Tactile)
-cor.test(conf2_clean$Auditory, conf2_clean$Pain)
-cor.test(conf2_clean$Visual, conf2_clean$Tactile)
-cor.test(conf2_clean$Visual, conf2_clean$Pain)
-cor.test(conf2_clean$Tactile, conf2_clean$Pain)
+cor.test(bias2$Auditory, bias2$Visual)
+cor.test(bias2$Auditory, bias2$Tactile)
+cor.test(bias2$Auditory, bias2$Pain)
+cor.test(bias2$Visual, bias2$Tactile)
+cor.test(bias2$Visual, bias2$Pain)
+cor.test(bias2$Tactile, bias2$Pain)
 
 
 ## Dataset 3
@@ -400,11 +427,24 @@ conf3_clean %<>%
   select(Pp, 
          Auditory = Auditory.y,
          Visual = Visual.y) %>% 
+  gather(Task, Conf,
+         -Pp)
+
+perf3 %<>%
+  select(-X) %>% 
+  gather(Task, Perf,
+         -Pp)
+bias3 <- merge(conf3_clean, perf3, by=c("Pp", "Task"))
+
+bias3 %<>%  
+  mutate(bias = (Conf/100) - Perf) %>% 
+  dcast(Pp ~ Task, value.var = "bias") %>% 
   mutate(D1 = Auditory - Visual)
+
 
 # statistics
 
-D1 <- lm(D1 ~ 1, conf3_clean)
+D1 <- lm(D1 ~ 1, bias3)
 
 qqnorm(residuals(D1))
 qqline(residuals(D1))
@@ -415,11 +455,11 @@ data.frame(x = residuals(D1)) %>%
 shapiro.test(residuals(D1))
 
 summary(D1)
-cor.test(conf3$Auditory, conf3$Visual)
-mean(conf3$Auditory, na.rm = TRUE)
-mean(conf3$Visual, na.rm = TRUE)
-sd(conf3$Auditory, na.rm = TRUE)
-sd(conf3$Visual, na.rm = TRUE)
+cor.test(bias3$Auditory, bias3$Visual)
+mean(bias3$Auditory, na.rm = TRUE)
+mean(bias3$Visual, na.rm = TRUE)
+sd(bias3$Auditory, na.rm = TRUE)
+sd(bias3$Visual, na.rm = TRUE)
 
 
 
@@ -582,24 +622,24 @@ Plot_d_1 <- dataset1 %>%
   xlab("Task") +
   ylab("d' value")
 
-conf1_clean %<>%
+bias1 %<>%
   select(Pp, 
          EM, VP, SM, EF) %>% 
   gather(Task, score, -Pp) 
 
-Plot_conf_1 <- conf1_clean %>%
+Plot_bias_1 <- bias1 %>%
   group_by(Task) %>%
   summarise(VD = mean(score, na.rm = TRUE),
             sd = sd(score, na.rm = TRUE),
             se = sd/sqrt(nsubj1),
             CI = se * qt(.975, n() - 1)) %>%
   ggplot(aes(x = Task, y = VD, color = Task)) +
-  geom_point(data = conf1_clean,
+  geom_point(data = bias1,
              aes(x = Task, y = score, color = Task),
              position = position_jitterdodge(0.8),
              size = 1, alpha = 0.2,
              show.legend = FALSE) +
-  geom_boxplot(data = conf1_clean,
+  geom_boxplot(data = bias1,
                aes(x = Task, y = score, fill = Task),
                outlier.shape = NA,
                alpha = .5, width = .2,
@@ -610,7 +650,7 @@ Plot_conf_1 <- conf1_clean %>%
   scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
   scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
   xlab("Task") +
-  ylab("mean raw confidence")
+  ylab("Metacognitive bias")
 
 Plot_mratio_1 <- dataset1 %>%
   select(Pp, 
@@ -641,7 +681,7 @@ Plot_mratio_1 <- dataset1 %>%
   ylab("M-ratio value")
 
 png(file="./plots/dataset1/dataset1.png", width=10, height=3, units="in", res=300)
-plot_grid(Plot_d_1, Plot_conf_1, Plot_mratio_1, labels = c("A", "B", "C"), nrow = 1, ncol = 3)
+plot_grid(Plot_d_1, Plot_bias_1, Plot_mratio_1, labels = c("A", "B", "C"), nrow = 1, ncol = 3)
 dev.off()
 
 
@@ -657,11 +697,11 @@ Plot_cor1 <- cor_Mratio %>%
   ggplot(aes(x = EM, y = VP)) +
   geom_point(colour = "#003366", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the EM task") +
-  ylab("Mratio for the VP task") +
+  xlab("M-ratio for the EM task") +
+  ylab("M-ratio for the VP task") +
   xlim(0, 2.2) +
   ylim(0, 2.2) +
-  ggtitle(paste("r = ", round(cor1$estimate, 2),"p = ", round(cor1$p.value, 3)))
+  ggtitle(paste("r = ", round(cor1$estimate, 2),"p = ", round(cor1$p.value, 3), "*"))
 
 # EM and SM
 cor2 <- tidy(cor.test(cor_Mratio$EM, cor_Mratio$SM))
@@ -670,11 +710,11 @@ Plot_cor2 <- cor_Mratio %>%
   ggplot(aes(x = EM, y = SM)) +
   geom_point(colour = "#003366", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the EM task") +
-  ylab("Mratio for the SM task") +
+  xlab("M-ratio for the EM task") +
+  ylab("M-ratio for the SM task") +
   xlim(0, 2.2) +
   ylim(0, 2.2) +
-  ggtitle(paste("r = ", round(cor2$estimate, 2),"p < 0.001 "))
+  ggtitle(paste("r = ", round(cor2$estimate, 2),"p < 0.001 *"))
 
 # EM and EF
 cor3 <- tidy(cor.test(cor_Mratio$EM, cor_Mratio$EF))
@@ -683,11 +723,11 @@ Plot_cor3 <- cor_Mratio %>%
   ggplot(aes(x = EM, y = EF)) +
   geom_point(colour = "#003366", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the EM task") +
-  ylab("Mratio for the EF task") +
+  xlab("M-ratio for the EM task") +
+  ylab("M-ratio for the EF task") +
   xlim(0, 2.2) +
   ylim(0, 2.2) +
-  ggtitle(paste("r = ", round(cor3$estimate, 2),"p = ", round(cor3$p.value, 3)))
+  ggtitle(paste("r = ", round(cor3$estimate, 2),"p = ", round(cor3$p.value, 3), "*"))
 
 # VP and SM
 cor4 <- tidy(cor.test(cor_Mratio$VP, cor_Mratio$SM))
@@ -696,8 +736,8 @@ Plot_cor4 <- cor_Mratio %>%
   ggplot(aes(x = VP, y = SM)) +
   geom_point(colour = "#003366", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the VP task") +
-  ylab("Mratio for the SM task") +
+  xlab("M-ratio for the VP task") +
+  ylab("M-ratio for the SM task") +
   xlim(0, 2.2) +
   ylim(0, 2.2) +
   ggtitle(paste("r = ", round(cor4$estimate, 2),"p = ", round(cor4$p.value, 3)))
@@ -709,11 +749,11 @@ Plot_cor5 <- cor_Mratio %>%
   ggplot(aes(x = VP, y = EF)) +
   geom_point(colour = "#003366", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the VP task") +
-  ylab("Mratio for the EF task") +
+  xlab("M-ratio for the VP task") +
+  ylab("M-ratio for the EF task") +
   xlim(0, 2.2) +
   ylim(0, 2.2) +
-  ggtitle(paste("r = ", round(cor5$estimate, 2),"p = ", round(cor5$p.value, 3)))
+  ggtitle(paste("r = ", round(cor5$estimate, 2),"p = ", round(cor5$p.value, 3), "*"))
 
 # SM and EF
 cor6 <- tidy(cor.test(cor_Mratio$SM, cor_Mratio$EF))
@@ -722,11 +762,11 @@ Plot_cor6 <- cor_Mratio %>%
   ggplot(aes(x = SM, y = EF)) +
   geom_point(colour = "#003366", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
-  xlab("Mratio for the SM task") +
-  ylab("Mratio for the EF task") +
+  xlab("M-ratio for the SM task") +
+  ylab("M-ratio for the EF task") +
   xlim(0, 2.2) +
   ylim(0, 2.2) +
-  ggtitle(paste("r = ", round(cor6$estimate, 2),"p = ", round(cor6$p.value, 3)))
+  ggtitle(paste("r = ", round(cor6$estimate, 2),"p = ", round(cor6$p.value, 3), "*"))
 
 
 png(file="./plots/dataset1/Mratio_corr1.png", width=11, height=8, units="in", res=300)  
@@ -769,24 +809,24 @@ Plot_d_2 <- dataset2 %>%
   ylab("d' value")
 
 
-conf2_clean %<>%
+bias2 %<>%
   select(Pp, 
          Auditory, Visual, Tactile, Pain) %>% 
   gather(Task, score, -Pp) 
 
-Plot_conf_2 <- conf2_clean %>%
+Plot_bias_2 <- bias2 %>%
   group_by(Task) %>%
   summarise(VD = mean(score, na.rm = TRUE),
             sd = sd(score, na.rm = TRUE),
             se = sd/sqrt(nsubj2),
             CI = se * qt(.975, n() - 1)) %>%
   ggplot(aes(x = Task, y = VD, color = Task)) +
-  geom_point(data = conf2_clean,
+  geom_point(data = bias2,
              aes(x = Task, y = score, color = Task),
              position = position_jitterdodge(0.8),
              size = 1, alpha = 0.2,
              show.legend = FALSE) +
-  geom_boxplot(data = conf2_clean,
+  geom_boxplot(data = bias2,
                aes(x = Task, y = score, fill = Task),
                outlier.shape = NA,
                alpha = .5, width = .2,
@@ -797,7 +837,7 @@ Plot_conf_2 <- conf2_clean %>%
   scale_colour_manual(values = c("#8B0000", "#FF0000", "#FF1493", "#FA8072")) +
   scale_fill_manual(values = c("#8B0000", "#FF0000", "#FF1493", "#FA8072")) +
   xlab("Modality") +
-  ylab("Raw confidence")
+  ylab("Metacognitive bias")
 
 Plot_mratio_2 <- dataset2 %>%
   select(Pp, 
@@ -828,7 +868,7 @@ Plot_mratio_2 <- dataset2 %>%
   ylab("M-ratio value")
 
 png(file="./plots/dataset2/dataset2.png", width=10, height=3, units="in", res=300)
-plot_grid(Plot_d_2, Plot_conf_2, Plot_mratio_2, labels = c("A", "B", "C"), nrow = 1, ncol = 3)
+plot_grid(Plot_d_2, Plot_bias_2, Plot_mratio_2, labels = c("A", "B", "C"), nrow = 1, ncol = 3)
 dev.off()
 
 
@@ -844,11 +884,11 @@ Plot_cor1 <- cor_Mratio2 %>%
   ggplot(aes(x = Auditory, y = Visual)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
-  xlab("Mratio for the auditory modality") +
-  ylab("Mratio for the visual modality") +
+  xlab("M-ratio for the auditory modality") +
+  ylab("M-ratio for the visual modality") +
   xlim(-0.5, 2.4) +
   ylim(-0.5, 2.4) +
-  ggtitle(paste("r = ", round(cor1$estimate, 2),"p < 0.001 "))
+  ggtitle(paste("r = ", round(cor1$estimate, 2),"p < 0.001 *"))
 
 
 # auditory and tactile
@@ -858,8 +898,8 @@ Plot_cor2 <- cor_Mratio2 %>%
   ggplot(aes(x = Auditory, y = Tactile)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
-  xlab("Mratio for the auditory modality") +
-  ylab("Mratio for the tactile modality") +
+  xlab("M-ratio for the auditory modality") +
+  ylab("M-ratio for the tactile modality") +
   xlim(-0.5, 2.4) +
   ylim(-0.5, 2.4) +
   ggtitle(paste("r = ", round(cor2$estimate, 2),"p = ", round(cor2$p.value, 3)))
@@ -872,8 +912,8 @@ Plot_cor3 <- cor_Mratio2 %>%
   ggplot(aes(x = Auditory, y = Pain)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
-  xlab("Mratio for the auditory modality") +
-  ylab("Mratio for the pain modality") +
+  xlab("M-ratio for the auditory modality") +
+  ylab("M-ratio for the pain modality") +
   xlim(-0.5, 2.4) +
   ylim(-0.5, 2.4) +
   ggtitle(paste("r = ", round(cor3$estimate, 2),"p = ", round(cor3$p.value, 3)))
@@ -886,11 +926,11 @@ Plot_cor4 <- cor_Mratio2 %>%
   ggplot(aes(x = Visual, y = Tactile)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
-  xlab("Mratio for the visual modality") +
-  ylab("Mratio for the tactile modality") +
+  xlab("M-ratio for the visual modality") +
+  ylab("M-ratio for the tactile modality") +
   xlim(-0.5, 2.4) +
   ylim(-0.5, 2.4) +
-  ggtitle(paste("r = ", round(cor4$estimate, 2),"p = ", round(cor4$p.value, 3)))
+  ggtitle(paste("r = ", round(cor4$estimate, 2),"p = ", round(cor4$p.value, 3), "*"))
 
 
 # visual and pain
@@ -900,8 +940,8 @@ Plot_cor5 <- cor_Mratio2 %>%
   ggplot(aes(x = Visual, y = Pain)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
-  xlab("Mratio for the visual modality") +
-  ylab("Mratio for the pain modality") +
+  xlab("M-ratio for the visual modality") +
+  ylab("M-ratio for the pain modality") +
   xlim(-0.5, 2.4) +
   ylim(-0.5, 2.4) +
   ggtitle(paste("r = ", round(cor5$estimate, 2),"p = ", round(cor5$p.value, 3)))
@@ -914,11 +954,11 @@ Plot_cor6 <- cor_Mratio2 %>%
   ggplot(aes(x = Tactile, y = Pain)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
-  xlab("Mratio for the tactile modality") +
-  ylab("Mratio for the pain modality") +
+  xlab("M-ratio for the tactile modality") +
+  ylab("M-ratio for the pain modality") +
   xlim(-0.5, 2.4) +
   ylim(-0.5, 2.4) +
-  ggtitle(paste("r = ", round(cor6$estimate, 2),"p = ", round(cor6$p.value, 3)))
+  ggtitle(paste("r = ", round(cor6$estimate, 2),"p = ", round(cor6$p.value, 3), "*"))
 
 
 png(file="./plots/dataset2/Mratio_corr2.png", width=11, height=8, units="in", res=300)  
@@ -962,24 +1002,24 @@ Plot_d_3 <- dataset3 %>%
   ylab("d' value")
 
 
-conf3_clean %<>%
+bias3 %<>%
   select(Pp, 
          Auditory, Visual) %>% 
   gather(Task, score, -Pp) 
 
-Plot_conf_3 <- conf3_clean %>%
+Plot_bias_3 <- bias3 %>%
   group_by(Task) %>%
   summarise(VD = mean(score),
             sd = sd(score),
             se = sd/sqrt(nsubj3),
             CI = se * qt(.975, n() - 1)) %>%
   ggplot(aes(x = Task, y = VD, color = Task)) +
-  geom_point(data = dataset3,
+  geom_point(data = bias3,
              aes(x = Task, y = score, color = Task),
              position = position_jitterdodge(0.8),
              size = 1, alpha = 0.2,
              show.legend = FALSE) +
-  geom_boxplot(data = dataset3,
+  geom_boxplot(data = bias3,
                aes(x = Task, y = score, fill = Task),
                outlier.shape = NA,
                alpha = .5, width = .2,
@@ -990,7 +1030,7 @@ Plot_conf_3 <- conf3_clean %>%
   scale_colour_manual(values = c("#FF8700", "#FFC100")) +
   scale_fill_manual(values = c("#FF8700", "#FFC100")) +
   xlab("Modality") +
-  ylab("Raw confidence")
+  ylab("Metacognitive bias")
 
 Plot_mratio_3 <- dataset3 %>%
   select(Pp, 
@@ -1035,9 +1075,14 @@ Plot_cor <- corr_AV %>%
 
 
 png(file="./plots/dataset3/dataset3.png", width=8, height=6, units="in", res=300)
-plot_grid(Plot_d_3, Plot_metad_3, Plot_mratio_3, Plot_cor, labels = c("A", "B", "C", "D"), nrow = 2, ncol = 2)
+plot_grid(Plot_d_3, Plot_bias_3, Plot_mratio_3, Plot_cor, labels = c("A", "B", "C", "D"), nrow = 2, ncol = 2)
 dev.off()
 
+
+# All datasets
+png(file="./plots/all_datasets.png", width=10, height=10, units="in", res=300)
+plot_grid(Plot_d_1, Plot_d_2, Plot_d_3, Plot_bias_1, Plot_bias_2, Plot_bias_3, Plot_mratio_1, Plot_mratio_2, Plot_mratio_3, labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I"), nrow = 3, ncol = 3)
+dev.off()
 
 
 
@@ -1261,12 +1306,7 @@ cor.test(dist_estimates3$Visual, dist_estimates3$dist_Visual)
 
 
 
-## Structural equation modeling --------------------------------------------
-
-library(lavaan)
-library(lavaanPlot)
-library(effectsize)
-
+## Structural equation modeling: per dataset --------------------------------------------
 
 # Dataset 1
 
@@ -1277,17 +1317,17 @@ data_m1 <- Mratio1 %>%
          Mratio_SM = SM, 
          Mratio_EF = EF) 
 
-data_m1 <- merge(data_m1, conf1_clean_short, by='Pp')
+data_m1 <- merge(data_m1, bias1, by='Pp')
 data_m1 %<>% 
   select(Pp, 
          Mratio_EM, 
          Mratio_VP, 
          Mratio_SM, 
          Mratio_EF,
-         conf_EM = EM,
-         conf_VP = VP,
-         conf_SM = SM,
-         conf_EF = EF) 
+         bias_EM = EM,
+         bias_VP = VP,
+         bias_SM = SM,
+         bias_EF = EF) 
 
 
 data_m1 <- merge(data_m1, rt1, by='Pp')
@@ -1297,18 +1337,33 @@ data_m1 %<>%
          Mratio_VP, 
          Mratio_SM, 
          Mratio_EF,
-         conf_EM,
-         conf_VP,
-         conf_SM,
-         conf_EF, 
+         bias_EM,
+         bias_VP,
+         bias_SM,
+         bias_EF, 
          rt_EM = EM,
          rt_VP = VP,
          rt_SM = SM,
          rt_EF = EF)
 
 m1 <- '
+g_metacog_eff =~ Mratio_EM + Mratio_VP + Mratio_SM + Mratio_EF 
+'
+
+cfa1 <- sem(m1, data=data_m1, missing="ml")
+varTable(cfa1)
+summary(cfa1, fit.measures=TRUE, standardized=TRUE)
+
+interpret(cfa1)
+
+lavaanPlot(model = cfa1, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+m1 <- '
 # measurement model
-g_metacog_bias =~ conf_EM + conf_VP + conf_SM + conf_EF 
+g_metacog_bias =~ bias_EM + bias_VP + bias_SM + bias_EF 
 g_rt =~ rt_EM + rt_VP + rt_SM + rt_EF 
 g_metacog_eff =~ Mratio_EM + Mratio_VP + Mratio_SM + Mratio_EF 
 # regressions
@@ -1320,15 +1375,6 @@ varTable(fit1)
 summary(fit1, fit.measures=TRUE, standardized=TRUE)
 
 interpret(fit1)
-
-M1 <- lm(Mratio_EM ~ conf_EM + c_EM + d_EM + rt_EM, data_m1)
-M2 <- lm(Mratio_VP ~ conf_VP + c_VP + d_VP + rt_VP, data_m1)
-M3 <- lm(Mratio_SM ~ conf_SM + c_SM + d_SM + rt_SM, data_m1)
-M4 <- lm(Mratio_EF ~ conf_EF + c_EF + d_EF + rt_EF, data_m1)
-summary(M1)
-summary(M2)
-summary(M3)
-summary(M4)
 
 lavaanPlot(model = fit1, sig=.05,stars=c("regress","latent","covs"),
            node_options = list(shape = "box", fontname = "Arial"),
@@ -1345,21 +1391,17 @@ data_m2 <- Mratio2 %>%
          Mratio_Tactile = Tactile, 
          Mratio_Pain = Pain) 
 
-
-conf2_clean_short <- conf2_clean %>% 
-  dcast(Pp ~ Task, value.var = 'score')
-
-data_m2 <- merge(data_m2, conf2_clean_short, by='Pp')
+data_m2 <- merge(data_m2, bias2, by='Pp')
 data_m2 %<>% 
   select(Pp, 
          Mratio_Auditory, 
          Mratio_Visual, 
          Mratio_Tactile, 
          Mratio_Pain,
-         conf_Auditory = Auditory,
-         conf_Visual = Visual,
-         conf_Pain = Pain,
-         conf_Tactile = Tactile) 
+         bias_Auditory = Auditory,
+         bias_Visual = Visual,
+         bias_Pain = Pain,
+         bias_Tactile = Tactile) 
 
 data_m2 <- merge(data_m2, rt2, by='Pp')
 data_m2 %<>% 
@@ -1368,18 +1410,51 @@ data_m2 %<>%
          Mratio_Visual, 
          Mratio_Tactile, 
          Mratio_Pain,
-         conf_Auditory,
-         conf_Visual,
-         conf_Pain,
-         conf_Tactile,
+         bias_Auditory,
+         bias_Visual,
+         bias_Pain,
+         bias_Tactile,
          rt_Auditory = Auditory,
          rt_Visual = Visual,
          rt_Tactile = Tactile, 
          rt_Pain = Pain) 
 
 m2 <- '
+G_efficiency =~ Mratio_Auditory + Mratio_Visual + Mratio_Tactile + Mratio_Pain 
+'
+
+fit2 <- sem(m2, data=data_m2, missing="ml")
+summary(fit2, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit2)
+
+lavaanPlot(model = fit2, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+m2 <- '
+g_perception =~ Mratio_Auditory + Mratio_Visual
+g_somato =~ Mratio_Tactile + Mratio_Pain 
+'
+
+fit2_2 <- sem(m2, data=data_m2, missing="ml")
+summary(fit2_2, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit2_2)
+
+lavaanPlot(model = fit2_2, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+# AIC comparision
+aictab(cand.set = list(fit2, fit2_2), modnames = c('full generality', 'perception and somato'))
+
+
+m2 <- '
 # measurement model
-g_metacog_bias =~ conf_Auditory + conf_Visual + conf_Tactile + conf_Pain 
+g_metacog_bias =~ bias_Auditory + bias_Visual + bias_Tactile + bias_Pain 
 g_rt =~ rt_Auditory + rt_Visual + rt_Tactile + rt_Pain 
 g_metacog_eff =~ Mratio_Auditory + Mratio_Visual + Mratio_Tactile + Mratio_Pain 
 # regressions
@@ -1438,6 +1513,9 @@ data_m3 %<>%
          conf_Visual,
          rt_Visual = Visual) 
 
+m3 <- 'g_metacog_eff =~ Mratio_Auditory + Mratio_Visual' # under-identified 
+fit3 <- sem(m3, data=data_m3, estimator = 'ML', missing = 'ml') # under-identified 
+
 
 m3 <- '
 # measurement model
@@ -1460,7 +1538,8 @@ lavaanPlot(model = fit3, sig=.05,stars=c("regress","latent","covs"),
 
 
 
-## Exploratory structures --------------------------------------------------
+## Confirmatory factor analyses --------------------------------------------------
+
 
 Mratio1_long <- Mratio1 %>% 
   select(Pp, EM, VP, SM, EF) %>% 
@@ -1471,7 +1550,418 @@ Mratio2_long <- Mratio2 %>%
   gather(Task, Mratio, -Pp)
 
 Mratio3_long <- Mratio3 %>% 
-  select(Pp, Auditory, Visual) %>% 
+  select(Pp, 
+         Auditory_study3 = Auditory, 
+         Visual_study3 = Visual) %>% 
   gather(Task, Mratio, -Pp)
+
+all_dataset_Mratio <- Mratio1_long %>% 
+  rbind(Mratio2_long) %>% 
+  rbind(Mratio3_long)
+
+
+# Confirmatory factor analyses 
+
+all_dataset_Mratio %<>%
+  dcast(Pp ~ Task, value.var = "Mratio")
+
+cfa_model_1 <- 'g_all =~ Auditory + Auditory_study3 + Visual + Visual_study3 + Pain + Tactile + EM + SM + VP + EF'
+cfa_model_2 <- 'g_perception =~ Auditory + Auditory_study3 + Visual + Visual_study3 + Pain + Tactile + VP
+                g_cognitive =~ EM + SM + EF'
+
+# model 1
+fit_cfa_1 <- sem(cfa_model_1, data=all_dataset_Mratio, missing="ML")
+lavInspect(fit_cfa_1, "coverage")
+varTable(fit_cfa_1)
+summary(fit_cfa_1, fit.measures=TRUE, standardized=TRUE)
+standardizedsolution(fit_cfa_1)
+
+interpret(fit_cfa_1)
+
+lavaanPlot(model = fit_cfa_1, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+# model 2
+fit_cfa_2 <- sem(cfa_model_2, data=all_dataset_Mratio, missing="ML")
+varTable(fit_cfa_2)
+summary(fit_cfa_2, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_cfa_2)
+
+lavaanPlot(model = fit_cfa_2, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+# AIC comparision
+aictab(cand.set = list(fit_cfa_1, fit_cfa_2), modnames = c('full generality', 'perception and cognitive'))
+
+
+## Dataset 1 and 3
+
+all_dataset_Mratio_1_3 <- Mratio1_long %>% 
+  rbind(Mratio3_long) %>% 
+  dcast(Pp ~ Task, value.var = "Mratio") %>% 
+  filter(EM != "")
+
+cfa_full_1_3 <- 'g_metacog_eff =~ EM + VP + SM + EF + Visual_study3 + Auditory_study3'
+
+fit_full_1_3 <- sem(cfa_full_1_3, data=all_dataset_Mratio_1_3, missing="ML")
+varTable(fit_full_1_3)
+summary(fit_full_1_3, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_full_1_3)
+
+lavaanPlot(model = fit_full_1_3, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+
+cfa_model_1_3 <- 'g_perception =~ VP + Visual_study3 + Auditory_study3
+                g_cognitive =~ EM + SM + EF'
+
+fit_cfa_1_3 <- sem(cfa_model_1_3, data=all_dataset_Mratio_1_3, missing="ML")
+varTable(fit_cfa_1_3)
+summary(fit_cfa_1_3, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_cfa_1_3)
+
+lavaanPlot(model = fit_cfa_1_3, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+
+cfa_study_1_3 <- 'g_study1 =~ EM + VP + SM + EF  
+                g_study3 =~  Auditory_study3 + Visual_study3'
+
+fit_study_1_3 <- sem(cfa_study_1_3, data=all_dataset_Mratio_1_3, missing="ML")
+varTable(fit_study_1_3)
+summary(fit_study_1_3, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_study_1_3)
+
+lavaanPlot(model = fit_study_1_3, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+
+# AIC comparision
+aictab(cand.set = list(fit_full_1_3, fit_cfa_1_3, fit_study_1_3), modnames = c('full generality', 'per modality', 'per study'))
+
+
+## Dataset 2 and 3
+
+all_dataset_Mratio_2_3 <- Mratio2_long %>% 
+  rbind(Mratio3_long) %>% 
+  dcast(Pp ~ Task, value.var = "Mratio") %>% 
+  filter(Auditory != "")
+
+cfa_full_2_3 <- 'g_metacog_eff =~ Auditory_study3 + Visual_study3 + Auditory + Visual + Pain + Tactile'
+
+fit_full_2_3 <- sem(cfa_full_2_3, data=all_dataset_Mratio_2_3, missing="ML")
+varTable(fit_full_2_3)
+summary(fit_full_2_3, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_full_2_3)
+
+lavaanPlot(model = fit_full_2_3, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+  
+cfa_model_2_3 <- 'g_visual =~ Visual + Visual_study3
+                g_auditory =~ Auditory + Auditory_study3
+                g_somato =~ Pain + Tactile'
+
+fit_cfa_2_3 <- sem(cfa_model_2_3, data=all_dataset_Mratio_2_3, missing="ML")
+varTable(fit_cfa_2_3)
+summary(fit_cfa_2_3, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_cfa_2_3)
+
+lavaanPlot(model = fit_cfa_2_3, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+
+cfa_study_2_3 <- 'g_study2 =~ Auditory + Visual + Pain + Tactile
+                g_study3 =~ Auditory_study3 + Visual_study3'
+
+fit_study_2_3 <- sem(cfa_study_2_3, data=all_dataset_Mratio_2_3, missing="ML")
+varTable(fit_study_2_3)
+summary(fit_study_2_3, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_study_2_3)
+
+lavaanPlot(model = fit_study_2_3, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+
+# AIC comparision
+aictab(cand.set = list(fit_full_2_3, fit_cfa_2_3, fit_study_2_3), modnames = c('full generality', 'per modality', 'per study'))
+
+
+
+## Models per dataset (under-identified)
+
+cfa_model_dataset <- 'g_study1 =~ EM + VP + SM + EF
+                      g_study2 =~ Auditory + Visual + Pain + Tactile 
+                      g_study3 =~ Auditory_multisite + Visual_multisite'
+
+# model 1
+fit_cfa_dataset <- sem(cfa_model_dataset, data=all_dataset_Mratio, missing="ML")
+summary(fit_cfa_dataset, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_cfa_dataset)
+
+lavaanPlot(model = fit_cfa_dataset, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+
+
+## Stuctural equation modelling --------------------------------------------
+
+# bias: gather studies 
+
+bias1_long <- bias1 %>% 
+  select(Pp, EM, VP, SM, EF) %>% 
+  gather(Task, bias, -Pp)
+
+bias2_long <- bias2 %>% 
+  select(Pp, Auditory, Visual, Tactile, Pain) %>% 
+  gather(Task, bias, -Pp)
+
+bias3_long <- bias3 %>% 
+  select(Pp, 
+         Auditory_study3 = Auditory, 
+         Visual_study3 = Visual) %>% 
+  gather(Task, bias, -Pp)
+
+all_dataset_bias <- bias1_long %>% 
+  rbind(bias2_long) %>% 
+  rbind(bias3_long) %>% 
+  dcast(Pp ~ Task, value.var = "bias") %>% 
+  select(Pp = Pp,
+         Bias_auditory = Auditory, 
+         Bias_auditory_study3 = Auditory_study3,
+         Bias_visual = Visual, 
+         Bias_visual_study3 = Visual_study3,
+         Bias_pain = Pain, 
+         Bias_tactile = Tactile,
+         Bias_EM = EM,
+         Bias_VP = VP,
+         Bias_SM = SM,
+         Bias_EF = EF)
+
+# reaction time: gather studies
+
+rt1_long <- rt1 %>% 
+  select(Pp, EM, VP, SM, EF) %>% 
+  gather(Task, rt, -Pp)
+
+rt2_long <- rt2 %>% 
+  select(Pp, Auditory, Visual, Tactile, Pain) %>% 
+  gather(Task, rt, -Pp)
+
+rt3_long <- rt3 %>% 
+  select(Pp, 
+         Auditory_study3 = Auditory, 
+         Visual_study3 = Visual) %>% 
+  gather(Task, rt, -Pp)
+
+all_dataset_rt <- rt1_long %>% 
+  rbind(rt2_long) %>% 
+  rbind(rt3_long) %>% 
+  dcast(Pp ~ Task, value.var = "rt") %>% 
+  select(Pp = Pp,
+         RT_auditory = Auditory, 
+         RT_auditory_study3 = Auditory_study3,
+         RT_visual = Visual, 
+         RT_visual_study3 = Visual_study3,
+         RT_pain = Pain, 
+         RT_tactile = Tactile,
+         RT_EM = EM,
+         RT_VP = VP,
+         RT_SM = SM,
+         RT_EF = EF)
+
+# first-order perf: gather studies
+
+first_order1_long <- first_order1 %>% 
+  select(Pp, EM, VP, SM, EF) %>% 
+  gather(Task, d, -Pp)
+
+first_order2_long <- first_order2 %>% 
+  select(Pp, Auditory, Visual, Tactile, Pain) %>% 
+  gather(Task, d, -Pp)
+
+first_order3_long <- first_order3 %>% 
+  select(Pp, 
+         Auditory_study3 = Auditory, 
+         Visual_study3 = Visual) %>% 
+  gather(Task, d, -Pp)
+
+all_dataset_d <- first_order1_long %>% 
+  rbind(first_order2_long) %>% 
+  rbind(first_order3_long) %>% 
+  dcast(Pp ~ Task, value.var = "d") %>% 
+  select(Pp = Pp,
+         d_auditory = Auditory, 
+         d_auditory_study3 = Auditory_study3,
+         d_visual = Visual, 
+         d_visual_study3 = Visual_study3,
+         d_pain = Pain, 
+         d_tactile = Tactile,
+         d_EM = EM,
+         d_VP = VP,
+         d_SM = SM,
+         d_EF = EF)
+
+
+# gather bias, rt, and Mratio
+
+data_for_sem <- all_dataset_Mratio %>% 
+  select(Pp = Pp,
+         Mratio_auditory = Auditory, 
+         Mratio_auditory_study3 = Auditory_study3,
+         Mratio_visual = Visual, 
+         Mratio_visual_study3 = Visual_study3,
+         Mratio_pain = Pain, 
+         Mratio_tactile = Tactile,
+         Mratio_EM = EM,
+         Mratio_VP = VP,
+         Mratio_SM = SM,
+         Mratio_EF = EF)
+
+data_for_sem <- merge(data_for_sem, all_dataset_bias, by="Pp")
+data_for_sem <- merge(data_for_sem, all_dataset_rt, by="Pp")
+
+
+# Structural equation models
+
+sem1 <- '
+# measurement model
+g_metacog_bias =~ Bias_auditory + Bias_auditory_study3 + Bias_visual + Bias_visual_study3 + Bias_pain + Bias_tactile + Bias_EM + Bias_VP + Bias_SM + Bias_EF 
+g_d =~ d_auditory + d_auditory_study3 + d_visual + d_visual_study3 + d_pain + d_tactile + d_EM + d_VP + d_SM + d_EF 
+g_rt =~ RT_auditory + RT_auditory_study3 + RT_visual + RT_visual_study3 + RT_pain + RT_tactile + RT_EM + RT_VP + RT_SM + RT_EF 
+g_metacog_eff =~ Mratio_auditory + Mratio_auditory_study3 + Mratio_visual + Mratio_visual_study3 + Mratio_pain + Mratio_tactile + Mratio_EM + Mratio_VP + Mratio_SM + Mratio_EF 
+# regressions
+g_metacog_eff ~ g_metacog_bias + g_rt + g_d'
+
+sem1 <- '
+# measurement model
+g_metacog_bias =~ Bias_auditory + Bias_auditory_study3 + Bias_visual + Bias_visual_study3 + Bias_pain + Bias_tactile + Bias_EM + Bias_VP + Bias_SM + Bias_EF 
+g_d =~ d_auditory + d_auditory_study3 + d_visual + d_visual_study3 + d_pain + d_tactile + d_EM + d_VP + d_SM + d_EF 
+g_metacog_eff =~ Mratio_auditory + Mratio_auditory_study3 + Mratio_visual + Mratio_visual_study3 + Mratio_pain + Mratio_tactile + Mratio_EM + Mratio_VP + Mratio_SM + Mratio_EF 
+# regressions
+g_metacog_eff ~ g_metacog_bias + g_d'
+
+sem1 <- '
+# measurement model
+g_metacog_bias =~ Bias_auditory + Bias_auditory_study3 + Bias_visual + Bias_visual_study3 + Bias_pain + Bias_tactile + Bias_EM + Bias_VP + Bias_SM + Bias_EF 
+g_rt =~ RT_auditory + RT_auditory_study3 + RT_visual + RT_visual_study3 + RT_pain + RT_tactile + RT_EM + RT_VP + RT_SM + RT_EF 
+g_metacog_eff =~ Mratio_auditory + Mratio_auditory_study3 + Mratio_visual + Mratio_visual_study3 + Mratio_pain + Mratio_tactile + Mratio_EM + Mratio_VP + Mratio_SM + Mratio_EF 
+# regressions
+g_metacog_eff ~ g_metacog_bias + g_rt'
+
+fit_sem1 <- sem(sem1, data=data_for_sem, missing="ML")
+varTable(fit_sem1)
+summary(fit_sem1, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_sem1)
+
+lavaanPlot(model = fit_sem1, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+
+sem1.1 <- '
+# measurement model
+g_metacog_bias =~ Bias_auditory + Bias_auditory_study3 + Bias_visual + Bias_visual_study3 + Bias_pain + Bias_tactile + Bias_EM + Bias_VP + Bias_SM + Bias_EF 
+Perceptual_metacog_eff =~ Mratio_auditory + Mratio_auditory_study3 + Mratio_visual + Mratio_visual_study3 + Mratio_pain + Mratio_tactile + Mratio_VP
+Cognitive_metacog_eff =~  Mratio_EM + Mratio_SM + Mratio_EF 
+# regressions
+Perceptual_metacog_eff ~ g_metacog_bias
+Cognitive_metacog_eff ~ g_metacog_bias'
+
+sem1.2 <- '
+# measurement model
+Perceptual_metacog_bias =~ Bias_auditory + Bias_auditory_study3 + Bias_visual + Bias_visual_study3 + Bias_pain + Bias_tactile + Bias_VP
+Cognitive_metacog_bias =~ Bias_EM + Bias_SM + Bias_EF
+Perceptual_metacog_eff =~ Mratio_auditory + Mratio_auditory_study3 + Mratio_visual + Mratio_visual_study3 + Mratio_pain + Mratio_tactile + Mratio_VP
+Cognitive_metacog_eff =~  Mratio_EM + Mratio_SM + Mratio_EF 
+# regressions
+Perceptual_metacog_eff ~ Perceptual_metacog_bias
+Cognitive_metacog_eff ~ Cognitive_metacog_bias'
+
+sem1.3 <- '
+# measurement model
+g_metacog_bias =~ Bias_auditory + Bias_auditory_study3 + Bias_visual + Bias_visual_study3 + Bias_pain + Bias_tactile + Bias_EM + Bias_VP + Bias_SM + Bias_EF
+g_metacog_eff =~ Mratio_auditory + Mratio_auditory_study3 + Mratio_visual + Mratio_visual_study3 + Mratio_pain + Mratio_tactile + Mratio_EM + Mratio_VP + Mratio_SM + Mratio_EF
+# regressions
+g_metacog_eff ~ g_metacog_bias'
+
+
+fit_sem1.1 <- sem(sem1.1, data=data_for_sem, missing="ML")
+fit_sem1.2 <- sem(sem1.2, data=data_for_sem, missing="ML")
+fit_sem1.3 <- sem(sem1.3, data=data_for_sem, missing="ML")
+
+interpret(fit_sem1.1)
+interpret(fit_sem1.2)
+interpret(fit_sem1.3)
+
+summary(fit_sem1.1, fit.measures=TRUE, standardized=TRUE)
+
+
+# AIC comparision
+aictab(cand.set = list(fit_sem1.1, fit_sem1.2, fit_sem1.3), modnames = c('full generality', 'perception and cognitive efficiency', 'perception and cognitive efficiency and bias'))
+
+
+lavaanPlot(model = fit_sem1.1, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
+
+
+
+sem2 <- '
+# measurement model
+g_metacog_bias =~ Bias_auditory + Bias_auditory_study3 + Bias_visual + Bias_visual_study3 + Bias_pain + Bias_tactile 
+g_rt =~ RT_auditory + RT_auditory_study3 + RT_visual + RT_visual_study3 + RT_pain + RT_tactile 
+g_metacog_eff =~ Mratio_auditory + Mratio_auditory_study3 + Mratio_visual + Mratio_visual_study3 + Mratio_pain + Mratio_tactile 
+# regressions
+g_metacog_eff ~ g_metacog_bias + g_rt'
+
+
+# sem2 <- '
+# # measurement model
+# g_metacog_bias =~ Bias_auditory + Bias_auditory_study3 + Bias_visual + Bias_visual_study3 + Bias_pain + Bias_tactile 
+# g_metacog_eff =~ Mratio_auditory + Mratio_auditory_study3 + Mratio_visual + Mratio_visual_study3 + Mratio_pain + Mratio_tactile 
+# # regressions
+# g_metacog_eff ~ g_metacog_bias'
+
+
+fit_sem2 <- sem(sem2, data=data_for_sem, missing="ML")
+varTable(fit_sem2)
+summary(fit_sem2, fit.measures=TRUE, standardized=TRUE)
+
+interpret(fit_sem2)
+
+lavaanPlot(model = fit_sem2, sig=.05,stars=c("regress","latent","covs"),
+           node_options = list(shape = "box", fontname = "Arial"),
+           edge_options = list(color = "grey"),
+           coefs = TRUE, covs = TRUE, stand=TRUE)
 
 
