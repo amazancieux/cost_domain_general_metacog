@@ -517,6 +517,35 @@ cor.test(Mratio1$VP, Mratio1$SM)
 cor.test(Mratio1$VP, Mratio1$EF)
 cor.test(Mratio1$SM, Mratio1$EF)
 
+# correlation with the same participants as H-Meta-d'
+HMeta_pp1 <- read.csv("./results/dataset1/participant_id_H-metad.csv", header=TRUE, sep=";", dec=".", fill  = TRUE)
+Mratio1_Hpp <- Mratio1[Mratio1$Pp %in% HMeta_pp1$Pp, ]
+
+cor.test(Mratio1_Hpp$EM, Mratio1_Hpp$VP)
+cor.test(Mratio1_Hpp$EM, Mratio1_Hpp$SM)
+cor.test(Mratio1_Hpp$EM, Mratio1_Hpp$EF)
+cor.test(Mratio1_Hpp$VP, Mratio1_Hpp$SM)
+cor.test(Mratio1_Hpp$VP, Mratio1_Hpp$EF)
+cor.test(Mratio1_Hpp$SM, Mratio1_Hpp$EF)
+
+
+
+# HMeta1 <- read.csv("./results/dataset1/Hierarchial_Mratio.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
+# 
+# HMeta1 %<>%
+#   filter(str_detect(name, "Mratio")) %>% 
+#   mutate(task = ifelse(str_detect(name, ",1]"), "EM", 
+#                        ifelse(str_detect(name, ",2]"), "VP",
+#                               ifelse(str_detect(name, ",3]"), "SM",
+#                                      ifelse(str_detect(name, ",4]"), "EF", "NO"))))) %>% 
+#   filter(task != "NO")
+# 
+# Pp1 <- c(HMeta_pp1$Pp, HMeta_pp1$Pp, HMeta_pp1$Pp, HMeta_pp1$Pp)
+# HMeta1 %<>%
+#   mutate(Pp = Pp1) %>% 
+#   dcast(Pp ~ task, value.var = "mean")
+
+
 ## Dataset 2
 
 Mratio2 <- dataset2 %>% 
@@ -562,6 +591,18 @@ summary(D5)
 summary(D6)
 
 
+# correlation with the same participants as H-Meta-d'
+HMeta_pp2 <- read.csv("./results/dataset2/participant_id_H-metad.csv", header=TRUE, sep=";", dec=".", fill  = TRUE)
+Mratio2_Hpp <- Mratio2[Mratio2$Pp %in% HMeta_pp2$Pp, ]
+
+cor.test(Mratio2_Hpp$Auditory, Mratio2_Hpp$Visual)
+cor.test(Mratio2_Hpp$Auditory, Mratio2_Hpp$Tactile)
+cor.test(Mratio2_Hpp$Auditory, Mratio2_Hpp$Pain)
+cor.test(Mratio2_Hpp$Visual, Mratio2_Hpp$Tactile)
+cor.test(Mratio2_Hpp$Visual, Mratio2_Hpp$Pain)
+cor.test(Mratio2_Hpp$Tactile, Mratio2_Hpp$Pain)
+
+
 ## Dataset 3
 
 Mratio3 <- dataset3 %>%
@@ -585,6 +626,12 @@ mean(Mratio3$Auditory)
 mean(Mratio3$Visual)
 sd(Mratio3$Auditory)
 sd(Mratio3$Visual)
+
+# correlation with the same participants as H-Meta-d'
+HMeta_pp3 <- read.csv("./results/dataset3/participant_id_H-metad.csv", header=TRUE, sep=";", dec=".", fill  = TRUE)
+Mratio3_Hpp <- Mratio3[Mratio3$Pp %in% HMeta_pp3$Pp, ]
+
+cor.test(Mratio3_Hpp$Auditory, Mratio3_Hpp$Visual)
 
 
 
@@ -1947,9 +1994,80 @@ cor.test(residual1$res_SM, residual1$res_EF)
 cor.test(data_for_sem$Mratio_SM, data_for_sem$Mratio_EF)
 
 
-# --> almost no differences in term of correlations  
+# dataset 2
+
+auditory <- lm(Mratio_auditory ~ Bias_auditory, data_for_sem)
+Res_auditory <- data_for_sem %>% 
+  select(Pp, Mratio_auditory) %>% 
+  filter(Mratio_auditory != "") %>% 
+  mutate(res_auditory = auditory[[2]])
+
+visual <- lm(Mratio_visual ~ Bias_visual, data_for_sem)
+Res_visual <- data_for_sem %>% 
+  select(Pp, Mratio_visual) %>% 
+  filter(Mratio_visual != "") %>% 
+  mutate(res_visual = visual[[2]])
+
+residual2 <- merge(Res_auditory, Res_visual, by='Pp')
+
+tactile <- lm(Mratio_tactile ~ Bias_tactile, data_for_sem)
+Res_tactile <- data_for_sem %>% 
+  select(Pp, Mratio_tactile, Bias_tactile) %>% 
+  filter(Bias_tactile != "") %>% 
+  mutate(res_tactile = tactile[[2]])
+
+Res_tactile <- Res_tactile[1:208,]
+Res_tactile %<>% 
+  mutate(res_tactile = tactile[[2]])
+
+residual2 <- merge(residual2, Res_tactile, by='Pp')
+
+pain <- lm(Mratio_pain ~ Bias_pain, data_for_sem)
+Res_pain <- data_for_sem %>% 
+  select(Pp, Mratio_pain, Bias_pain) %>% 
+  filter(Bias_pain != "") %>% 
+  mutate(res_pain = pain[[2]])
+
+residual2 <- merge(residual2, Res_pain, by='Pp')
 
 
+cor.test(residual2$res_auditory, residual2$res_visual)
+cor.test(data_for_sem$Mratio_auditory, data_for_sem$Mratio_visual)
+
+cor.test(residual2$res_auditory, residual2$res_tactile)
+cor.test(data_for_sem$Mratio_auditory, data_for_sem$Mratio_tactile)
+
+cor.test(residual2$res_auditory, residual2$res_pain)
+cor.test(data_for_sem$Mratio_auditory, data_for_sem$Mratio_pain)
+
+cor.test(residual2$res_tactile, residual2$res_visual)
+cor.test(data_for_sem$Mratio_tactile, data_for_sem$Mratio_visual)
+
+cor.test(residual2$res_pain, residual2$res_visual)
+cor.test(data_for_sem$Mratio_pain, data_for_sem$Mratio_visual)
+
+cor.test(residual2$res_tactile, residual2$res_pain)
+cor.test(data_for_sem$Mratio_tactile, data_for_sem$Mratio_pain)
+
+
+# dataset 3
+
+auditory3 <- lm(Mratio_auditory_study3 ~ Bias_auditory_study3, data_for_sem)
+Res_auditory3 <- data_for_sem %>% 
+  select(Pp, Mratio_auditory) %>% 
+  filter(Mratio_auditory != "") %>% 
+  mutate(res_auditory = auditory[[2]])
+
+visual3 <- lm(Mratio_visual_study3 ~ Bias_visual_study3, data_for_sem)
+Res_visual3 <- data_for_sem %>% 
+  select(Pp, Mratio_visual) %>% 
+  filter(Mratio_visual != "") %>% 
+  mutate(res_visual = visual[[2]])
+
+residual3 <- merge(Res_auditory3, Res_visual3, by='Pp')
+
+cor.test(residual3$res_auditory, residual3$res_visual)
+cor.test(data_for_sem$Mratio_auditory_study3, data_for_sem$Mratio_visual_study3)
 
 
 
