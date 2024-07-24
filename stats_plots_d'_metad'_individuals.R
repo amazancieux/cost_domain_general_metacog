@@ -42,6 +42,18 @@ rt1 <- read.csv("./results/dataset1/reaction_time1.csv", header=TRUE, sep=",", d
 rt2 <- read.csv("./results/dataset2/reaction_time2.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 rt3 <- read.csv("./results/dataset3/reaction_time3.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
 
+# after screening outlier exclusion for Mratio > 3 for dataset 1
+dataset1 %<>%
+  filter(Mratio < 3)
+
+# after screening outlier exclusion for Mratio > 2 and < 0 for dataset 2
+dataset2 %<>%
+  filter(Mratio > 0 & Mratio < 2)
+
+# after screening outlier exclusion for Mratio > 2.8 and < 0 for dataset 2
+dataset3 %<>%
+  filter(Mratio > 0)
+
 
 ## First-order performance all datasets (stats) ------------------------------------
 
@@ -453,26 +465,7 @@ sd(bias3$Visual, na.rm = TRUE)
 
 ## Dataset 1
 
-# outliers detection per task
-lower_bound_EM <- mean(dataset1$Mratio[dataset1$Task == 'EM'], na.rm = TRUE) - 2 * sd(dataset1$Mratio[dataset1$Task == 'EM'], na.rm = TRUE)
-higher_bound_EM <- mean(dataset1$Mratio[dataset1$Task == 'EM'], na.rm = TRUE) + 2 * sd(dataset1$Mratio[dataset1$Task == 'EM'], na.rm = TRUE)
-lower_bound_SM <- mean(dataset1$Mratio[dataset1$Task == 'SM'], na.rm = TRUE) - 2 * sd(dataset1$Mratio[dataset1$Task == 'SM'], na.rm = TRUE)
-higher_bound_SM <- mean(dataset1$Mratio[dataset1$Task == 'SM'], na.rm = TRUE) + 2 * sd(dataset1$Mratio[dataset1$Task == 'SM'], na.rm = TRUE)
-lower_bound_VP <- mean(dataset1$Mratio[dataset1$Task == 'VP'], na.rm = TRUE) - 2 * sd(dataset1$Mratio[dataset1$Task == 'VP'], na.rm = TRUE)
-higher_bound_VP <- mean(dataset1$Mratio[dataset1$Task == 'VP'], na.rm = TRUE) + 2 * sd(dataset1$Mratio[dataset1$Task == 'VP'], na.rm = TRUE)
-lower_bound_EF <- mean(dataset1$Mratio[dataset1$Task == 'EF'], na.rm = TRUE) - 2 * sd(dataset1$Mratio[dataset1$Task == 'EF'], na.rm = TRUE)
-higher_bound_EF <- mean(dataset1$Mratio[dataset1$Task == 'EF'], na.rm = TRUE) + 2 * sd(dataset1$Mratio[dataset1$Task == 'EF'], na.rm = TRUE)
-
-# outliers exclusion
-dataset1_clean <- dataset1 %>% 
-  mutate(Excl = case_when(
-    Task == 'EM' & Mratio > lower_bound_EM & Mratio < higher_bound_EM ~ 1,
-    Task == 'SM' & Mratio > lower_bound_SM & Mratio < higher_bound_SM ~ 1,
-    Task == 'VP' & Mratio > lower_bound_VP & Mratio < higher_bound_VP ~ 1,
-    Task == 'EF' & Mratio > lower_bound_EF & Mratio < higher_bound_EF ~ 1))
-
-Mratio1 <- dataset1_clean %>% 
-  filter(Excl == '1') %>% 
+Mratio1 <- dataset1 %>% 
   dcast(Pp ~ Task, value.var = "Mratio") %>% 
   mutate(D1 = EM - VP,
          D2 = EM - SM,
@@ -480,13 +473,6 @@ Mratio1 <- dataset1_clean %>%
          D4 = VP - SM,
          D5 = VP - EF,
          D6 = SM - EF) 
-
-# count included participants per task
-length(which(Mratio1$EM != ''))
-length(which(Mratio1$SM != ''))
-length(which(Mratio1$VP != ''))
-length(which(Mratio1$EF != ''))
-
 
 # linear models
 D1 <- lm(D1 ~ 1, Mratio1)
@@ -525,26 +511,6 @@ summary(D4)
 summary(D5)
 summary(D6)
 
-# correlations
-cor.test(Mratio1$EM, Mratio1$VP)
-cor.test(Mratio1$EM, Mratio1$SM)
-cor.test(Mratio1$EM, Mratio1$EF)
-cor.test(Mratio1$VP, Mratio1$SM)
-cor.test(Mratio1$VP, Mratio1$EF)
-cor.test(Mratio1$SM, Mratio1$EF)
-
-# comparisiion of correlations
-
-# for EM & VP
-paired.r(cor.test(Mratio1$EM, Mratio1$VP)[[4]], cor.test(Mratio1$EM, Mratio1$SM)[[4]], cor.test(Mratio1$VP, Mratio1$SM)[[4]], 171)
-paired.r(cor.test(Mratio1$EM, Mratio1$VP)[[4]], cor.test(Mratio1$EM, Mratio1$EF)[[4]], cor.test(Mratio1$VP, Mratio1$EF)[[4]], 171)
-paired.r(cor.test(Mratio1$EM, Mratio1$VP)[[4]], cor.test(Mratio1$VP, Mratio1$SM)[[4]], cor.test(Mratio1$EM, Mratio1$SM)[[4]], 171)
-paired.r(cor.test(Mratio1$EM, Mratio1$VP)[[4]], cor.test(Mratio1$EF, Mratio1$VP)[[4]], cor.test(Mratio1$EM, Mratio1$EF)[[4]], 171)
-paired.r(cor.test(Mratio1$EM, Mratio1$VP)[[4]], cor.test(Mratio1$EF, Mratio1$SM)[[4]], NULL, 171, 220)
-
-# for SM & VP and SM & EM (lower and higher)
-paired.r(cor.test(Mratio1$SM, Mratio1$VP)[[4]], cor.test(Mratio1$SM, Mratio1$EM)[[4]], cor.test(Mratio1$VP, Mratio1$EM)[[4]], 171)
-
 
 # correlation with the same participants as H-Meta-d'
 HMeta_pp1 <- read.csv("./results/dataset1/participant_id_H-metad.csv", header=TRUE, sep=";", dec=".", fill  = TRUE)
@@ -560,26 +526,7 @@ cor.test(Mratio1_Hpp$SM, Mratio1_Hpp$EF)
 
 ## Dataset 2
 
-# outliers detection per task
-lower_bound_Auditory <- mean(dataset2$Mratio[dataset2$Modality == 'Auditory'], na.rm = TRUE) - 2 * sd(dataset2$Mratio[dataset2$Modality == 'Auditory'], na.rm = TRUE)
-higher_bound_Auditory <- mean(dataset2$Mratio[dataset2$Modality == 'Auditory'], na.rm = TRUE) + 2 * sd(dataset2$Mratio[dataset2$Modality == 'Auditory'], na.rm = TRUE)
-lower_bound_Visual <- mean(dataset2$Mratio[dataset2$Modality == 'Visual'], na.rm = TRUE) - 2 * sd(dataset2$Mratio[dataset2$Modality == 'Visual'], na.rm = TRUE)
-higher_bound_Visual <- mean(dataset2$Mratio[dataset2$Modality == 'Visual'], na.rm = TRUE) + 2 * sd(dataset2$Mratio[dataset2$Modality == 'Visual'], na.rm = TRUE)
-lower_bound_Tactile <- mean(dataset2$Mratio[dataset2$Modality == 'Tactile'], na.rm = TRUE) - 2 * sd(dataset2$Mratio[dataset2$Modality == 'Tactile'], na.rm = TRUE)
-higher_bound_Tactile <- mean(dataset2$Mratio[dataset2$Modality== 'Tactile'], na.rm = TRUE) + 2 * sd(dataset2$Mratio[dataset2$Modality == 'Tactile'], na.rm = TRUE)
-lower_bound_Pain <- mean(dataset2$Mratio[dataset2$Modality == 'Pain'], na.rm = TRUE) - 2 * sd(dataset2$Mratio[dataset2$Modality == 'Pain'], na.rm = TRUE)
-higher_bound_Pain <- mean(dataset2$Mratio[dataset2$Modality == 'Pain'], na.rm = TRUE) + 2 * sd(dataset2$Mratio[dataset2$Modality == 'Pain'], na.rm = TRUE)
-
-# outliers exclusion
-dataset2_clean <- dataset2 %>% 
-  mutate(Excl = case_when(
-    Modality == 'Auditory' & Mratio > lower_bound_Auditory & Mratio < higher_bound_Auditory ~ 1,
-    Modality == 'Visual' & Mratio > lower_bound_Visual & Mratio < higher_bound_Visual ~ 1,
-    Modality == 'Tactile' & Mratio > lower_bound_Tactile & Mratio < higher_bound_Tactile ~ 1,
-    Modality == 'Pain' & Mratio > lower_bound_Pain & Mratio < higher_bound_Pain ~ 1))
-
-Mratio2 <- dataset2_clean %>% 
-  filter(Excl == 1) %>% 
+Mratio2 <- dataset2 %>% 
   dcast(Pp ~ Modality, value.var = "Mratio") %>% 
   mutate(D1 = Auditory - Visual,
          D2 = Auditory - Tactile,
@@ -587,13 +534,6 @@ Mratio2 <- dataset2_clean %>%
          D4 = Visual - Tactile,
          D5 = Visual - Pain,
          D6 = Tactile - Pain) 
-
-# count included participants per task
-length(which(Mratio2$Auditory != ''))
-length(which(Mratio2$Visual != ''))
-length(which(Mratio2$Tactile != ''))
-length(which(Mratio2$Pain != ''))
-
 
 # linear models
 D1 <- lm(D1 ~ 1, Mratio2)
@@ -641,39 +581,12 @@ cor.test(Mratio2_Hpp$Visual, Mratio2_Hpp$Tactile)
 cor.test(Mratio2_Hpp$Visual, Mratio2_Hpp$Pain)
 cor.test(Mratio2_Hpp$Tactile, Mratio2_Hpp$Pain)
 
-# comparisiion of correlations
-
-# for auditory & visual
-paired.r(cor.test(Mratio2$Auditory, Mratio2$Visual)[[4]], cor.test(Mratio2$Auditory, Mratio2$Tactile)[[4]], cor.test(Mratio2$Visual, Mratio2$Tactile)[[4]], 202)
-paired.r(cor.test(Mratio2$Auditory, Mratio2$Visual)[[4]], cor.test(Mratio2$Auditory, Mratio2$Pain)[[4]], cor.test(Mratio2$Visual, Mratio2$Pain)[[4]], 241)
-paired.r(cor.test(Mratio2$Auditory, Mratio2$Visual)[[4]], cor.test(Mratio2$Visual, Mratio2$Tactile)[[4]], cor.test(Mratio2$Auditory, Mratio2$Tactile)[[4]], 202)
-paired.r(cor.test(Mratio2$Auditory, Mratio2$Visual)[[4]], cor.test(Mratio2$Visual, Mratio2$Pain)[[4]], cor.test(Mratio2$Auditory, Mratio2$Pain)[[4]], 244)
-paired.r(cor.test(Mratio2$Auditory, Mratio2$Visual)[[4]], cor.test(Mratio2$Tactile, Mratio2$Pain)[[4]], NULL, 202)
-
-# for auditory & tactile and tactile anc visual (lower and higher)
-paired.r(cor.test(Mratio2$Auditory, Mratio2$Tactile)[[4]], cor.test(Mratio2$Visual, Mratio2$Tactile)[[4]], cor.test(Mratio2$Auditory, Mratio2$Visual)[[4]], 202)
-
 
 ## Dataset 3
-lower_bound_Auditory <- mean(dataset3$Mratio[dataset3$Modality == 'Auditory'], na.rm = TRUE) - 2 * sd(dataset3$Mratio[dataset3$Modality == 'Auditory'], na.rm = TRUE)
-higher_bound_Auditory <- mean(dataset3$Mratio[dataset3$Modality == 'Auditory'], na.rm = TRUE) + 2 * sd(dataset3$Mratio[dataset3$Modality == 'Auditory'], na.rm = TRUE)
-lower_bound_Visual <- mean(dataset3$Mratio[dataset3$Modality == 'Visual'], na.rm = TRUE) - 2 * sd(dataset3$Mratio[dataset3$Modality == 'Visual'], na.rm = TRUE)
-higher_bound_Visual <- mean(dataset3$Mratio[dataset3$Modality == 'Visual'], na.rm = TRUE) + 2 * sd(dataset3$Mratio[dataset3$Modality == 'Visual'], na.rm = TRUE)
 
-# outliers exclusion
-dataset3_clean <- dataset3 %>% 
-  mutate(Excl = case_when(
-    Modality == 'Auditory' & Mratio > lower_bound_Auditory & Mratio < higher_bound_Auditory ~ 1,
-    Modality == 'Visual' & Mratio > lower_bound_Visual & Mratio < higher_bound_Visual ~ 1))
-
-Mratio3 <- dataset3_clean %>%
+Mratio3 <- dataset3 %>%
   dcast(Pp ~ Modality, value.var = "Mratio") %>%
   mutate(D1 = Auditory - Visual) 
-
-# count included participants per task
-length(which(Mratio3$Auditory != ''))
-length(which(Mratio3$Visual != ''))
-
 
 # linear models
 D1 <- lm(D1 ~ 1, Mratio3)
@@ -688,10 +601,10 @@ shapiro.test(residuals(D1))
 
 summary(D1)
 cor.test(Mratio3$Auditory, Mratio3$Visual)
-mean(Mratio3$Auditory)
-mean(Mratio3$Visual)
-sd(Mratio3$Auditory)
-sd(Mratio3$Visual)
+mean(Mratio3$Auditory, na.rm = TRUE)
+mean(Mratio3$Visual, na.rm = TRUE)
+sd(Mratio3$Auditory, na.rm = TRUE)
+sd(Mratio3$Visual, na.rm = TRUE)
 
 # correlation with the same participants as H-Meta-d'
 HMeta_pp3 <- read.csv("./results/dataset3/participant_id_H-metad.csv", header=TRUE, sep=";", dec=".", fill  = TRUE)
@@ -732,6 +645,7 @@ Plot_d_1 <- dataset1 %>%
   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0))+
   scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
   scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
+  ylim(0, 4.9) +
   xlab("Task") +
   ylab("d' value")
 
@@ -762,11 +676,11 @@ Plot_bias_1 <- bias1 %>%
   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0.2))+
   scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
   scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
+  ylim(-0.40, 0.34) +
   xlab("Task") +
   ylab("Metacognitive bias")
 
-Plot_mratio_1 <- dataset1_clean %>%
-  filter(Excl == '1') %>% 
+Plot_mratio_1 <- dataset1 %>%
   select(Pp, 
          Task,
          score = Mratio) %>% 
@@ -791,12 +705,9 @@ Plot_mratio_1 <- dataset1_clean %>%
   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0.2))+
   scale_colour_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
   scale_fill_manual(values = c("#0F056B", "#003366", "#2C75FF", "#9683EC")) +
+  ylim(0, 2.85) +
   xlab("Task") +
   ylab("M-ratio value")
-
-png(file="./plots/dataset1/dataset1.png", width=10, height=3, units="in", res=300)
-plot_grid(Plot_d_1, Plot_bias_1, Plot_mratio_1, labels = c("A", "B", "C"), nrow = 1, ncol = 3)
-dev.off()
 
 
 ## Cross-task correlations
@@ -810,8 +721,8 @@ Plot_cor1 <- Mratio1 %>%
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
   xlab("M-ratio for the EM task") +
   ylab("M-ratio for the VP task") +
-  xlim(0, 2.2) +
-  ylim(0, 2.2) +
+  xlim(0, 2) +
+  ylim(0, 2) +
   ggtitle(paste("r = ", round(cor1$estimate, 2),"p = ", round(cor1$p.value, 3), "*"))
 
 # EM and SM
@@ -823,8 +734,8 @@ Plot_cor2 <- Mratio1 %>%
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
   xlab("M-ratio for the EM task") +
   ylab("M-ratio for the SM task") +
-  xlim(0, 2.2) +
-  ylim(0, 2.2) +
+  xlim(0, 2) +
+  ylim(0, 2) +
   ggtitle(paste("r = ", round(cor2$estimate, 2),"p < 0.001 *"))
 
 # EM and EF
@@ -836,8 +747,8 @@ Plot_cor3 <- Mratio1 %>%
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
   xlab("M-ratio for the EM task") +
   ylab("M-ratio for the EF task") +
-  xlim(0, 2.2) +
-  ylim(0, 2.2) +
+  xlim(0, 2) +
+  ylim(0, 2) +
   ggtitle(paste("r = ", round(cor3$estimate, 2),"p = ", round(cor3$p.value, 3), "*"))
 
 # VP and SM
@@ -849,8 +760,8 @@ Plot_cor4 <- Mratio1 %>%
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
   xlab("M-ratio for the VP task") +
   ylab("M-ratio for the SM task") +
-  xlim(0, 2.2) +
-  ylim(0, 2.2) +
+  xlim(0, 2) +
+  ylim(0, 2) +
   ggtitle(paste("r = ", round(cor4$estimate, 2),"p = ", round(cor4$p.value, 3)))
 
 # VP and EF
@@ -862,21 +773,21 @@ Plot_cor5 <- Mratio1 %>%
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
   xlab("M-ratio for the VP task") +
   ylab("M-ratio for the EF task") +
-  xlim(0, 2.2) +
-  ylim(0, 2.2) +
+  xlim(0, 2) +
+  ylim(0, 2) +
   ggtitle(paste("r = ", round(cor5$estimate, 2),"p = ", round(cor5$p.value, 3), "*"))
 
 # SM and EF
 cor6 <- tidy(cor.test(Mratio1$SM, Mratio1$EF))
 
-Plot_cor6 <- cor_Mratio %>% 
+Plot_cor6 <- Mratio1 %>% 
   ggplot(aes(x = SM, y = EF)) +
   geom_point(colour = "#003366", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "#003366", size = 0.75) +
   xlab("M-ratio for the SM task") +
   ylab("M-ratio for the EF task") +
-  xlim(0, 2.2) +
-  ylim(0, 2.2) +
+  xlim(0, 2) +
+  ylim(0, 2) +
   ggtitle(paste("r = ", round(cor6$estimate, 2),"p = ", round(cor6$p.value, 3), "*"))
 
 
@@ -916,6 +827,7 @@ Plot_d_2 <- dataset2 %>%
   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0))+
   scale_colour_manual(values = c("#8B0000", "#FF0000", "#FF1493", "#FA8072")) +
   scale_fill_manual(values = c("#8B0000", "#FF0000", "#FF1493", "#FA8072")) +
+  ylim(0, 4.9) +
   xlab("Modality") +
   ylab("d' value")
 
@@ -947,6 +859,7 @@ Plot_bias_2 <- bias2 %>%
   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0.2))+
   scale_colour_manual(values = c("#8B0000", "#FF0000", "#FF1493", "#FA8072")) +
   scale_fill_manual(values = c("#8B0000", "#FF0000", "#FF1493", "#FA8072")) +
+  ylim(-0.40, 0.34) +
   xlab("Modality") +
   ylab("Metacognitive bias")
 
@@ -975,101 +888,95 @@ Plot_mratio_2 <- dataset2 %>%
   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0.2))+
   scale_colour_manual(values = c("#8B0000", "#FF0000", "#FF1493", "#FA8072")) +
   scale_fill_manual(values = c("#8B0000", "#FF0000", "#FF1493", "#FA8072")) +
+  ylim(0, 2.85) +
   xlab("Modality") +
   ylab("M-ratio value")
-
-png(file="./plots/dataset2/dataset2.png", width=10, height=3, units="in", res=300)
-plot_grid(Plot_d_2, Plot_bias_2, Plot_mratio_2, labels = c("A", "B", "C"), nrow = 1, ncol = 3)
-dev.off()
 
 
 ## Cross-task correlations
 
-cor_Mratio2 <- dataset2 %>% 
-  dcast(Pp ~ Modality, value.var = 'Mratio')
-
 # auditory and visual 
-cor1 <- tidy(cor.test(cor_Mratio2$Auditory, cor_Mratio2$Visual))
+cor1 <- tidy(cor.test(Mratio2$Auditory, Mratio2$Visual))
 
-Plot_cor1 <- cor_Mratio2 %>% 
+Plot_cor1 <- Mratio2 %>% 
   ggplot(aes(x = Auditory, y = Visual)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
   xlab("M-ratio for the auditory modality") +
   ylab("M-ratio for the visual modality") +
-  xlim(-0.5, 2.4) +
-  ylim(-0.5, 2.4) +
-  ggtitle(paste("r = ", round(cor1$estimate, 2),"p < 0.001 *"))
+  xlim(0, 2) +
+  ylim(0, 2) +
+  ggtitle(paste("r = ", round(cor1$estimate, 2), "p = ", round(cor2$p.value, 3)))
 
 
 # auditory and tactile
-cor2 <- tidy(cor.test(cor_Mratio2$Auditory, cor_Mratio2$Tactile))
+cor2 <- tidy(cor.test(Mratio2$Auditory, Mratio2$Tactile))
 
-Plot_cor2 <- cor_Mratio2 %>% 
+Plot_cor2 <- Mratio2 %>% 
   ggplot(aes(x = Auditory, y = Tactile)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
   xlab("M-ratio for the auditory modality") +
   ylab("M-ratio for the tactile modality") +
-  xlim(-0.5, 2.4) +
-  ylim(-0.5, 2.4) +
+  xlim(0, 2) +
+  ylim(0, 2) +
   ggtitle(paste("r = ", round(cor2$estimate, 2),"p = ", round(cor2$p.value, 3)))
 
 
 # auditory and pain
-cor3 <- tidy(cor.test(cor_Mratio2$Auditory, cor_Mratio2$Pain))
+cor3 <- tidy(cor.test(Mratio2$Auditory, Mratio2$Pain))
 
-Plot_cor3 <- cor_Mratio2 %>% 
+Plot_cor3 <- Mratio2 %>% 
   ggplot(aes(x = Auditory, y = Pain)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
   xlab("M-ratio for the auditory modality") +
   ylab("M-ratio for the pain modality") +
-  xlim(-0.5, 2.4) +
-  ylim(-0.5, 2.4) +
+  xlim(0, 2) +
+  ylim(0, 2) +
   ggtitle(paste("r = ", round(cor3$estimate, 2),"p = ", round(cor3$p.value, 3)))
 
 
 # visual and tactile
-cor4 <- tidy(cor.test(cor_Mratio2$Visual, cor_Mratio2$Tactile))
+cor4 <- tidy(cor.test(Mratio2$Visual, Mratio2$Tactile))
 
-Plot_cor4 <- cor_Mratio2 %>% 
+Plot_cor4 <- Mratio2 %>% 
   ggplot(aes(x = Visual, y = Tactile)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
   xlab("M-ratio for the visual modality") +
   ylab("M-ratio for the tactile modality") +
-  xlim(-0.5, 2.4) +
-  ylim(-0.5, 2.4) +
-  ggtitle(paste("r = ", round(cor4$estimate, 2),"p = ", round(cor4$p.value, 3), "*"))
+  xlim(0, 2) +
+  ylim(0, 2) +
+  ggtitle(paste("r = ", round(cor4$estimate, 2),"p = ", round(cor4$p.value, 3)))
 
 
 # visual and pain
-cor5 <- tidy(cor.test(cor_Mratio2$Visual, cor_Mratio2$Pain))
+cor5 <- tidy(cor.test(Mratio2$Visual, Mratio2$Pain))
 
-Plot_cor5 <- cor_Mratio2 %>% 
+Plot_cor5 <- Mratio2 %>% 
   ggplot(aes(x = Visual, y = Pain)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
   xlab("M-ratio for the visual modality") +
   ylab("M-ratio for the pain modality") +
-  xlim(-0.5, 2.4) +
-  ylim(-0.5, 2.4) +
+  xlim(0, 2) +
+  ylim(0, 2) +
   ggtitle(paste("r = ", round(cor5$estimate, 2),"p = ", round(cor5$p.value, 3)))
 
 
 # tactivle and pain
-cor6 <- tidy(cor.test(cor_Mratio2$Tactile, cor_Mratio2$Pain))
+cor6 <- tidy(cor.test(Mratio2$Tactile, Mratio2$Pain))
 
-Plot_cor6 <- cor_Mratio2 %>% 
+Plot_cor6 <- Mratio2 %>% 
   ggplot(aes(x = Tactile, y = Pain)) +
   geom_point(colour = "red", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, colour = "red", size = 0.75) +
   xlab("M-ratio for the tactile modality") +
   ylab("M-ratio for the pain modality") +
-  xlim(-0.5, 2.4) +
-  ylim(-0.5, 2.4) +
-  ggtitle(paste("r = ", round(cor6$estimate, 2),"p = ", round(cor6$p.value, 3), "*"))
+  xlim(0, 2) +
+  ylim(0, 2) +
+  ggtitle(paste("r = ", round(cor6$estimate, 2),"p = ", round(cor6$p.value, 3)))
 
 
 png(file="./plots/dataset2/Mratio_corr2.png", width=11, height=8, units="in", res=300)  
@@ -1077,12 +984,9 @@ plot_grid(Plot_cor1, Plot_cor2, Plot_cor3,NULL,Plot_cor4, Plot_cor5,NULL,NULL,Pl
 dev.off()
 
 
-
-
 ## Plots dataset 3 ---------------------------------------------------------
 
 nsubj3 <-length(unique(dataset3$Pp))
-
 
 Plot_d_3 <- dataset3 %>%
   select(Pp, 
@@ -1109,6 +1013,7 @@ Plot_d_3 <- dataset3 %>%
   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0))+
   scale_colour_manual(values = c("#FF8700", "#FFC100")) +
   scale_fill_manual(values = c("#FF8700", "#FFC100")) +
+  ylim(0, 4.9) +
   xlab("Modality") +
   ylab("d' value")
 
@@ -1140,6 +1045,7 @@ Plot_bias_3 <- bias3 %>%
   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0.2))+
   scale_colour_manual(values = c("#FF8700", "#FFC100")) +
   scale_fill_manual(values = c("#FF8700", "#FFC100")) +
+  ylim(-0.40, 0.34) +
   xlab("Modality") +
   ylab("Metacognitive bias")
 
@@ -1168,6 +1074,7 @@ Plot_mratio_3 <- dataset3 %>%
   geom_errorbar(aes(ymin = VD - CI, ymax = VD + CI), width = 0, size = 0.5, color = 'black', position = position_dodge(0.2))+
   scale_colour_manual(values = c("#FF8700", "#FFC100")) +
   scale_fill_manual(values = c("#FF8700", "#FFC100")) +
+  ylim(0, 2.85) +
   xlab("Modality") +
   ylab("M-ratio value")
 
@@ -1176,7 +1083,7 @@ corr_AV <- dataset3 %>%
   dcast(Pp ~ Modality, value.var = "Mratio")
 cor1 <- tidy(cor.test(corr_AV$Auditory, corr_AV$Visual))
 
-Plot_cor <- corr_AV %>% 
+corr_AV %>% 
   ggplot(aes(x = Auditory, y = Visual)) +
   geom_point(shape = 1, colour = "#FF7400") +
   geom_smooth(method = "lm", se = FALSE, colour = "#FF7400", size = 0.75) +
@@ -1185,12 +1092,8 @@ Plot_cor <- corr_AV %>%
   ggtitle(paste("r = ", round(cor1$estimate, 2),"p < 0.001 "))
 
 
-png(file="./plots/dataset3/dataset3.png", width=8, height=6, units="in", res=300)
-plot_grid(Plot_d_3, Plot_bias_3, Plot_mratio_3, Plot_cor, labels = c("A", "B", "C", "D"), nrow = 2, ncol = 2)
-dev.off()
+# Plot all datasets
 
-
-# All datasets
 png(file="./plots/all_datasets.png", width=10, height=10, units="in", res=300)
 plot_grid(Plot_d_1, Plot_d_2, Plot_d_3, Plot_bias_1, Plot_bias_2, Plot_bias_3, Plot_mratio_1, Plot_mratio_2, Plot_mratio_3, labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I"), nrow = 3, ncol = 3)
 dev.off()
@@ -1272,6 +1175,7 @@ all_dataset_Mratio %<>%
 
 write.csv2(all_dataset_Mratio, "Mratio_all_studies.csv")
 
+
 # Gather metacognitive bias across studies 
 
 bias1_long <- bias1 %>% 
@@ -1309,90 +1213,90 @@ write.csv2(all_dataset_bias, "bias_all_studies.csv")
 
 ## Residual correlations -------------------------------------------------------
 
+# Merge bias and Mratio dataframes
+all_bias_Mratio <- merge(all_dataset_bias, all_dataset_Mratio, by ="Pp")
+
 # Dataset 1
 
-EM <- lm(Mratio_EM ~ Bias_EM, data_for_sem)
-EM <- lm(Mratio_EM ~ Conf_EM, data_for_sem)
+EM <- lm(EM ~ Bias_EM, all_bias_Mratio)
+res <- EM[[2]]
 Res_EM <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_EM) %>% 
-  filter(Mratio_EM != "") %>% 
-  mutate(res_EM = EM[[2]])
+  select(Pp, EM) %>% 
+  filter(EM != "") %>% 
+  mutate(res_EM = res)
 
-VP <- lm(Mratio_VP ~ Bias_VP, data_for_sem)
-VP <- lm(Mratio_VP ~ Conf_VP, data_for_sem)
+VP <- lm(VP ~ Bias_VP, all_bias_Mratio)
+res <- VP[[2]]
 Res_VP <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_VP) %>% 
-  filter(Mratio_VP != "") %>% 
-  mutate(res_VP = VP[[2]])
+  select(Pp, VP) %>% 
+  filter(VP != "") %>% 
+  mutate(res_VP = res)
 
 residual1 <- merge(Res_EM, Res_VP, by='Pp')
 
-SM <- lm(Mratio_SM ~ Bias_SM, data_for_sem)
-SM <- lm(Mratio_SM ~ Conf_SM, data_for_sem)
+SM <- lm(SM ~ Bias_SM, all_bias_Mratio)
+res <- SM[[2]]
 Res_SM <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_SM) %>% 
-  filter(Mratio_SM != "") %>% 
-  mutate(res_SM = SM[[2]])
+  select(Pp, SM) %>% 
+  filter(SM != "") %>% 
+  mutate(res_SM = res)
 
 residual1 <- merge(residual1, Res_SM, by='Pp')
 
-EF <- lm(Mratio_EF ~ Bias_EF, data_for_sem)
-EF <- lm(Mratio_EF ~ Conf_EF, data_for_sem)
+EF <- lm(EF ~ Bias_EF, all_bias_Mratio)
+res <- EF[[2]]
 Res_EF <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_EF) %>% 
-  filter(Mratio_EF != "") %>% 
-  mutate(res_EF = EF[[2]])
+  select(Pp, EF) %>% 
+  filter(EF != "") %>% 
+  mutate(res_EF = res)
 
 residual1 <- merge(residual1, Res_EF, by='Pp')
 
 
-cor.test(residual1$res_EM, residual1$res_VP)
-cor.test(residual1$res_EM, residual1$res_SM)
-cor.test(residual1$res_EM, residual1$res_EF)
-cor.test(residual1$res_SM, residual1$res_VP)
-cor.test(residual1$res_EF, residual1$res_VP)
-cor.test(residual1$res_SM, residual1$res_EF)
+cor.test(residual1$res_EM, residual1$res_VP, na.rm = TRUE)
+cor.test(residual1$res_EM, residual1$res_SM, na.rm = TRUE)
+cor.test(residual1$res_EM, residual1$res_EF, na.rm = TRUE)
+cor.test(residual1$res_SM, residual1$res_VP, na.rm = TRUE)
+cor.test(residual1$res_EF, residual1$res_VP, na.rm = TRUE)
+cor.test(residual1$res_SM, residual1$res_EF, na.rm = TRUE)
 
 
 # Dataset 2
 
-auditory <- lm(Mratio_auditory ~ Bias_auditory, data_for_sem)
-auditory <- lm(Mratio_auditory ~ Conf_auditory, data_for_sem)
-Res_auditory <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_auditory) %>% 
-  filter(Mratio_auditory != "") %>% 
-  mutate(res_auditory = auditory[[2]])
+auditory <- lm(Auditory ~ Bias_auditory, all_bias_Mratio)
+res <- auditory[[2]]
+Res_auditory <- all_bias_Mratio %>% 
+  select(Pp, Auditory) %>% 
+  filter(Auditory != "") %>% 
+  mutate(res_auditory = res)
 
-visual <- lm(Mratio_visual ~ Bias_visual, data_for_sem)
-visual <- lm(Mratio_visual ~ Conf_visual, data_for_sem)
-Res_visual <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_visual) %>% 
-  filter(Mratio_visual != "") %>% 
-  mutate(res_visual = visual[[2]])
+visual <- lm(Visual ~ Bias_visual, all_bias_Mratio)
+res <- visual[[2]]
+Res_visual <- all_bias_Mratio %>% 
+  select(Pp, Visual) %>% 
+  filter(Visual != "") %>% 
+  mutate(res_visual = res)
 
 residual2 <- merge(Res_auditory, Res_visual, by='Pp')
 
-tactile <- lm(Mratio_tactile ~ Bias_tactile, data_for_sem)
-tactile <- lm(Mratio_tactile ~ Conf_tactile, data_for_sem)
-Res_tactile <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_tactile, Bias_tactile) %>% 
-  filter(Bias_tactile != "") %>% 
-  mutate(res_tactile = tactile[[2]])
-
-Res_tactile <- Res_tactile[1:208,]
-Res_tactile %<>% 
-  mutate(res_tactile = tactile[[2]])
+tactile <- lm(Tactile ~ Bias_tactile, all_bias_Mratio)
+res <- tactile[[2]]
+Res_tactile <- all_bias_Mratio %>% 
+  select(Pp, Tactile, Bias_tactile) %>% 
+  filter(Tactile != "") %>% 
+  mutate(res_tactile = res)
 
 residual2 <- merge(residual2, Res_tactile, by='Pp')
 
-pain <- lm(Mratio_pain ~ Bias_pain, data_for_sem)
-pain <- lm(Mratio_pain ~ Conf_pain, data_for_sem)
-Res_pain <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_pain, Bias_pain) %>% 
-  filter(Bias_pain != "") %>% 
-  mutate(res_pain = pain[[2]])
+pain <- lm(Pain ~ Bias_pain, all_bias_Mratio)
+res <- pain[[2]]
+Res_pain <- all_bias_Mratio %>% 
+  select(Pp, Pain, Bias_pain) %>% 
+  filter(Pain != "") %>% 
+  mutate(res_pain = res)
 
 residual2 <- merge(residual2, Res_pain, by='Pp')
+
 
 cor.test(residual2$res_auditory, residual2$res_visual)
 cor.test(residual2$res_auditory, residual2$res_tactile)
@@ -1404,178 +1308,20 @@ cor.test(residual2$res_tactile, residual2$res_pain)
 
 # Dataset 3
 
-auditory3 <- lm(Mratio_auditory_study3 ~ Bias_auditory_study3, data_for_sem)
-Res_auditory3 <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_auditory) %>% 
-  filter(Mratio_auditory != "") %>% 
-  mutate(res_auditory = auditory[[2]])
+auditory3 <- lm(Auditory_study3 ~ Bias_auditory_study3, all_bias_Mratio)
+res <- auditory[[2]]
+Res_auditory3 <- all_bias_Mratio %>% 
+  select(Pp, Auditory_study3) %>% 
+  filter(Auditory_study3 != "") %>% 
+  mutate(res_auditory = res)
 
-visual3 <- lm(Mratio_visual_study3 ~ Bias_visual_study3, data_for_sem)
-Res_visual3 <- all_dataset_Mratio %>% 
-  select(Pp, Mratio_visual) %>% 
-  filter(Mratio_visual != "") %>% 
-  mutate(res_visual = visual[[2]])
+visual3 <- lm(Visual_study3 ~ Bias_visual_study3, all_bias_Mratio)
+res <- visual[[2]]
+Res_visual3 <- all_bias_Mratio %>% 
+  select(Pp, Visual_study3) %>% 
+  filter(Visual_study3 != "") %>% 
+  mutate(res_visual = res)
 
 residual3 <- merge(Res_auditory3, Res_visual3, by='Pp')
 cor.test(residual3$res_auditory, residual3$res_visual)
-
-
-## Comparison individual estimates H and non-H --------------------------
-
-## Dataset 1
-
-# load H-mratio
-H_dataset1 <- read.csv("./results/dataset1/Hierarchial_Mratio.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-# load included participants id
-H_Pp1 <- read.csv("./results/dataset1/participant_id_H-metad.csv", header=TRUE, sep=";", dec=".", fill  = TRUE)
-
-# get individual fits per task
-H_Mratio1 <- H_dataset1 %>% 
-  filter(str_detect(name, "Mratio")) %>% 
-  filter(!str_detect(name, "mu")) %>% 
-  filter(!str_detect(name, "sigma")) %>% 
-  mutate(Pp_num = str_match(name, "[0-9]+,"), 
-         Task_num = str_match(name, ",[0-9]"),
-         Task = case_when(
-           Task_num == ",1" ~ "EM",
-           Task_num == ",2" ~ "VP",
-           Task_num == ",3" ~ "SM",
-           Task_num == ",4" ~ "EF"),
-         Num = as.numeric(str_match(name, "[0-9]+"))) %>% 
-  dcast(Num ~ Task, value.var = "mean") %>% 
-  cbind(Pp = H_Pp1$Pp)
-
-
-# correlations across estimates within tasks
-Mratio_corr1 <- merge(Mratio1, H_Mratio1, by='Pp')
-
-cor.test(Mratio_corr1$EM.x, Mratio_corr1$EM.y)
-cor.test(Mratio_corr1$VP.x, Mratio_corr1$VP.y)
-cor.test(Mratio_corr1$SM.x, Mratio_corr1$SM.y)
-cor.test(Mratio_corr1$EF.x, Mratio_corr1$EF.y)
-
-# calculate absolute distance between estimates
-dist_estimates <- Mratio_corr1 %>% 
-  mutate(dist_EM = abs(EM.x - EM.y),
-         dist_VP = abs(VP.x - VP.y),
-         dist_SM = abs(SM.x - SM.y),
-         dist_EF = abs(EF.x - EF.y)) %>% 
-  select(Pp, dist_EM,
-         dist_VP, dist_SM, dist_EF)
-
-# correlations distance and raw confidence
-conf1_clean_short <- conf1_clean %>% 
-  dcast(Pp ~ Task, value.var = 'Conf')
-dist_estimates <- merge(dist_estimates, conf1_clean_short, by = "Pp")
-
-
-# correlations distance and metacognitive bias
-dist_estimates <- merge(dist_estimates, bias1, by = "Pp")
-
-cor.test(abs(dist_estimates$EM), dist_estimates$dist_EM)
-cor.test(abs(dist_estimates$VP), dist_estimates$dist_VP)
-cor.test(abs(dist_estimates$SM), dist_estimates$dist_SM)
-cor.test(abs(dist_estimates$EF), dist_estimates$dist_EF)
-
-
-## Dataset 2
-
-# load H-mratio
-H_dataset2 <- read.csv("./results/dataset2/Hierarchial_Mratio.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-# load included participants id
-H_Pp2 <- read.csv("./results/dataset2/participant_id_H-metad.csv", header=TRUE, sep=";", dec=".", fill  = TRUE)
-
-# get individual fits per task
-H_Mratio2 <- H_dataset2 %>% 
-  filter(str_detect(name, "Mratio")) %>% 
-  filter(!str_detect(name, "mu")) %>% 
-  filter(!str_detect(name, "sigma")) %>% 
-  mutate(Pp_num = str_match(name, "[0-9]+,"), 
-         Task_num = str_match(name, ",[0-9]"),
-         Modality = case_when(
-           Task_num == ",1" ~ "Auditory",
-           Task_num == ",2" ~ "Visual",
-           Task_num == ",3" ~ "Tactile",
-           Task_num == ",4" ~ "Pain"),
-         Num = as.numeric(str_match(name, "[0-9]+"))) %>% 
-  dcast(Num ~ Modality, value.var = "mean") %>% 
-  cbind(Pp = H_Pp2$Pp)
-
-
-# correlations across estimates within tasks
-Mratio_corr2 <- merge(Mratio2, H_Mratio2, by='Pp')
-
-cor.test(Mratio_corr2$Auditory.x, Mratio_corr2$Auditory.y)
-cor.test(Mratio_corr2$Visual.x, Mratio_corr2$Visual.y)
-cor.test(Mratio_corr2$Tactile.x, Mratio_corr2$Tactile.y)
-cor.test(Mratio_corr2$Pain.x, Mratio_corr2$Pain.y)
-
-# calculate distance between estimates
-dist_estimates2 <- Mratio_corr2 %>% 
-  mutate(dist_Auditory = Auditory.x - Auditory.y,
-         dist_Visual = Visual.x - Visual.y,
-         dist_Tactile = Tactile.x - Tactile.y,
-         dist_Pain = Pain.x - Pain.y) %>% 
-  select(Pp, dist_Auditory,
-         dist_Visual, dist_Tactile, dist_Pain)
-
-# correlations distance and raw confidence 
-conf2_clean_short <- conf2_clean %>% 
-  dcast(Pp ~ Task, value.var = 'Conf')
-dist_estimates2 <- merge(dist_estimates2, conf2_clean_short, by = "Pp")
-
-# correlations distance and metacognitive bias
-dist_estimates2 <- merge(dist_estimates2, bias2, by = "Pp")
-
-cor.test(abs(dist_estimates2$Auditory), dist_estimates2$dist_Auditory)
-cor.test(abs(dist_estimates2$Visual), dist_estimates2$dist_Visual)
-cor.test(abs(dist_estimates2$Tactile), dist_estimates2$dist_Tactile)
-cor.test(abs(dist_estimates2$Pain), dist_estimates2$dist_Pain)
-
-
-## Dataset 3
-
-# load H-mratio
-H_dataset3 <- read.csv("./results/dataset3/Hierarchial_Mratio.csv", header=TRUE, sep=",", dec=".", fill  = TRUE)
-# load included participants id
-H_Pp3 <- read.csv("./results/dataset3/participant_id_H-metad.csv", header=TRUE, sep=";", dec=".", fill  = TRUE)
-
-# get individual fits per task
-H_Mratio3 <- H_dataset3 %>% 
-  filter(str_detect(name, "Mratio")) %>% 
-  filter(!str_detect(name, "mu")) %>% 
-  filter(!str_detect(name, "sigma")) %>% 
-  mutate(Pp_num = str_match(name, "[0-9]+,"), 
-         Task_num = str_match(name, ",[0-9]"),
-         Modality = case_when(
-           Task_num == ",1" ~ "Auditory",
-           Task_num == ",2" ~ "Visual"),
-         Num = as.numeric(str_match(name, "[0-9]+"))) %>% 
-  dcast(Num ~ Modality, value.var = "mean") %>% 
-  cbind(Pp = H_Pp3$Pp)
-
-# correlations across estimates within tasks
-Mratio_corr3 <- merge(Mratio3, H_Mratio3, by='Pp')
-
-cor.test(Mratio_corr3$Auditory.x, Mratio_corr3$Auditory.y)
-cor.test(Mratio_corr3$Visual.x, Mratio_corr3$Visual.y)
-
-# calculate distance between estimates
-dist_estimates3 <- Mratio_corr3 %>% 
-  mutate(dist_Auditory = Auditory.x - Auditory.y,
-         dist_Visual = Visual.x - Visual.y) %>% 
-  select(Pp, dist_Auditory, dist_Visual)
-
-# correlations distance and raw confidence 
-conf3_clean_short <- conf3_clean %>% 
-  dcast(Pp ~ Task, value.var = 'Conf')
-dist_estimates3 <- merge(dist_estimates3, conf3_clean_short, by = "Pp")
-
-# correlations distance and metacognitive bias
-dist_estimates3 <- merge(dist_estimates3, bias3, by = "Pp")
-
-cor.test(abs(dist_estimates3$Auditory), dist_estimates3$dist_Auditory)
-cor.test(abs(dist_estimates3$Visual), dist_estimates3$dist_Visual)
-
-
 
