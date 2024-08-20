@@ -147,7 +147,7 @@ DF2 %<>%
                           ifelse(answ_1 == 2 & correct == 1, 2,
                                  ifelse(answ_1 == 1 & correct == 0, 2,
                                         ifelse(answ_1 == 2 & correct == 0, 1, "NO")))))
-    
+
 # Prepare data
 
 tasks <- unique(DF2$Modality)
@@ -461,5 +461,4 @@ all_data %<>%
   filter(Perf > 0.55 & Perf < 0.95)
 
 write.csv2(all_data, "./results/dataset3/clean_individual_Mratio.csv")
-
 
