@@ -238,52 +238,52 @@ Fit <- read.csv("./results/dataset2/Hierarchial_Mratio.csv", header=TRUE, sep=",
 # Plot mu_logMratio posterior distribution
 
 Auditory <- mcmc.sample %>%
-    filter(Parameter == "mu_logMratio[1]") %>% 
-    ggplot(aes(exp(value))) +
-    geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
-    geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[1]"]),linetype="dashed", size = 1) +
-    geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[1]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[1]"]), yend = 200), colour = "white", size = 2.5) +
-    apatheme +
-    xlim(c(0.70, 1.40)) +
-    ylim(c(0, 6500)) +
-    ylab("Sample count") +
-    xlab(expression(paste(mu, " Mratio")))
+  filter(Parameter == "mu_logMratio[1]") %>% 
+  ggplot(aes(exp(value))) +
+  geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
+  geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[1]"]),linetype="dashed", size = 1) +
+  geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[1]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[1]"]), yend = 200), colour = "white", size = 2.5) +
+  apatheme +
+  xlim(c(0.70, 1.40)) +
+  ylim(c(0, 6500)) +
+  ylab("Sample count") +
+  xlab(expression(paste(mu, " Mratio")))
 
 Visual <- mcmc.sample %>%
-    filter(Parameter == "mu_logMratio[2]") %>% 
-    ggplot(aes(exp(value))) +
-    geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
-    geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[2]"]),linetype="dashed", size = 1) +
-    geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[2]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[2]"]), yend = 200), colour = "white", size = 2.5) +
-    apatheme +
-    xlim(c(0.70, 1.40)) +
-    ylim(c(0, 6500)) +
-    ylab("Sample count") +
-    xlab(expression(paste(mu, " Mratio")))
+  filter(Parameter == "mu_logMratio[2]") %>% 
+  ggplot(aes(exp(value))) +
+  geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
+  geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[2]"]),linetype="dashed", size = 1) +
+  geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[2]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[2]"]), yend = 200), colour = "white", size = 2.5) +
+  apatheme +
+  xlim(c(0.70, 1.40)) +
+  ylim(c(0, 6500)) +
+  ylab("Sample count") +
+  xlab(expression(paste(mu, " Mratio")))
 
 Tactile <- mcmc.sample %>%
-    filter(Parameter == "mu_logMratio[3]") %>% 
-    ggplot(aes(exp(value))) +
-    geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
-    geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[3]"]),linetype="dashed", size = 1) +
-    geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[3]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[3]"]), yend = 200), colour = "white", size = 2.5) +
-    apatheme +
-    xlim(c(0.70, 1.40)) +
-    ylim(c(0, 6500)) +
-    ylab("Sample count") +
-    xlab(expression(paste(mu, " Mratio")))
+  filter(Parameter == "mu_logMratio[3]") %>% 
+  ggplot(aes(exp(value))) +
+  geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
+  geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[3]"]),linetype="dashed", size = 1) +
+  geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[3]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[3]"]), yend = 200), colour = "white", size = 2.5) +
+  apatheme +
+  xlim(c(0.70, 1.40)) +
+  ylim(c(0, 6500)) +
+  ylab("Sample count") +
+  xlab(expression(paste(mu, " Mratio")))
 
 Pain <- mcmc.sample %>%
-    filter(Parameter == "mu_logMratio[4]") %>% 
-    ggplot(aes(exp(value))) +
-    geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
-    geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[4]"]),linetype="dashed", size = 1) +
-    geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[4]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[4]"]), yend = 200), colour = "white", size = 2.5) +
-    apatheme +
-    xlim(c(0.70, 1.40)) +
-    ylim(c(0, 6500)) +
-    ylab("Sample count") +
-    xlab(expression(paste(mu, " Mratio")))
+  filter(Parameter == "mu_logMratio[4]") %>% 
+  ggplot(aes(exp(value))) +
+  geom_histogram(binwidth = 0.01, fill = "blue", colour = "grey", alpha = 0.5) +
+  geom_vline(xintercept = exp(stat_group$mean[stat_group$name == "mu_logMratio[4]"]),linetype="dashed", size = 1) +
+  geom_segment(aes(x = exp(HDI$lower[HDI$name == "mu_logMratio[4]"]), y = 200, xend = exp(HDI$upper[HDI$name == "mu_logMratio[4]"]), yend = 200), colour = "white", size = 2.5) +
+  apatheme +
+  xlim(c(0.70, 1.40)) +
+  ylim(c(0, 6500)) +
+  ylab("Sample count") +
+  xlab(expression(paste(mu, " Mratio")))
 
 png(file="./plots/dataset2/MRATIO_4MODALITIES.png", width=10, height=8, units="in", res=300)
 plot_grid(Auditory, Visual, Tactile, Pain, labels = c("Auditory", "Visual", "Tactile", "Pain"), nrow = 2, ncol = 2) 
@@ -529,13 +529,7 @@ Pain <- Perf %>%
          Modality = 'Pain')
 
 
-write.csv(Auditory, "./results/dataset2/auditory_individual_metad.csv")
-write.csv(Visual, "./results/dataset2/visual_individual_metad.csv")
-write.csv(Tactile, "./results/dataset2/tactile_individual_metad.csv")
-write.csv(Pain, "./results/dataset2/pain_individual_metad.csv")
-
-
-## Calculate ratio and plot data ------------------------------------------------------------
+## Calculate ratio  ------------------------------------------------------------
 
 all_data <- Auditory %>% 
   rbind(Visual, 
@@ -553,7 +547,5 @@ all_data <- subset(all_data, all_data$Pp != 65251 | all_data$Modality != "Tactil
 all_data <- subset(all_data, all_data$Pp != 87127 | all_data$Modality != "Tactile")
 
 
-write.csv2(all_data, "./results/dataset2/Individual_Mratio_forplots.csv")
-
-
+write.csv2(all_data, "./results/dataset2/clean_Mratio_individual.csv")
 
