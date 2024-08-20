@@ -224,7 +224,7 @@ for (t in 1:(ntask)) {
            `6_R2`)
   
   nR_S2[[t]] %<>%  rbind(S2)
-
+  
 }
 
 # save included participants ID
@@ -654,7 +654,7 @@ for (t in 1:(ntask)) {
     stat1 <- data.frame(mean = Value[["statistics"]][, "Mean"])
     stat[[t]] %<>% rbind(t(stat1)) 
     
-    }
+  }
 }
 
 write.csv(stat, "results/dataset1/output_fit_individual_metad.csv")
@@ -706,5 +706,4 @@ Mratio_all %<>%
   filter(perf >= 0.55 & perf <= 0.95)
 
 write.csv2(Mratio_all, "results/dataset1/clean_Mratio_individual.csv")
-
 
