@@ -632,7 +632,7 @@ Plot_d_1 <- dataset1 %>%
   ggplot(aes(x = Task, y = VD, color = Task)) +
   geom_point(data = dataset1,
              aes(x = Task, y = d, color = Task),
-             position = position_jitterdodge(2),
+             position = position_jitterdodge(0.8),
              size = 1, alpha = 0.2, 
              show.legend = FALSE) +
   geom_boxplot(data = dataset1,
@@ -692,7 +692,7 @@ Plot_mratio_1 <- dataset1 %>%
   ggplot(aes(x = Task, y = VD, color = Task)) +
   geom_point(data = dataset1,
              aes(x = Task, y = Mratio, color = Task),
-             position = position_jitterdodge(2),
+             position = position_jitterdodge(0.8),
              size = 1, alpha = 0.2,
              show.legend = FALSE) +
   geom_boxplot(data = dataset1,
@@ -814,7 +814,7 @@ Plot_d_2 <- dataset2 %>%
   ggplot(aes(x = Modality, y = VD, color = Modality)) +
   geom_point(data = dataset2,
              aes(x = Modality, y = d, color = Modality),
-             position = position_jitterdodge(2),
+             position = position_jitterdodge(0.8),
              size = 1, alpha = 0.2, 
              show.legend = FALSE) +
   geom_boxplot(data = dataset2,
@@ -875,7 +875,7 @@ Plot_mratio_2 <- dataset2 %>%
   ggplot(aes(x = Modality, y = VD, color = Modality)) +
   geom_point(data = dataset2,
              aes(x = Modality, y = Mratio, color = Modality),
-             position = position_jitterdodge(2),
+             position = position_jitterdodge(0.8),
              size = 1, alpha = 0.2,
              show.legend = FALSE) +
   geom_boxplot(data = dataset2,
@@ -1000,7 +1000,7 @@ Plot_d_3 <- dataset3 %>%
   ggplot(aes(x = Modality, y = VD, color = Modality)) +
   geom_point(data = dataset3,
              aes(x = Modality, y = d, color = Modality),
-             position = position_jitterdodge(2),
+             position = position_jitterdodge(0.8),
              size = 1, alpha = 0.2, 
              show.legend = FALSE) +
   geom_boxplot(data = dataset3,
@@ -1061,7 +1061,7 @@ Plot_mratio_3 <- dataset3 %>%
   ggplot(aes(x = Modality, y = VD, color = Modality)) +
   geom_point(data = dataset3,
              aes(x = Modality, y = Mratio, color = Modality),
-             position = position_jitterdodge(2),
+             position = position_jitterdodge(0.8),
              size = 1, alpha = 0.3,
              show.legend = FALSE) +
   geom_boxplot(data = dataset3,
